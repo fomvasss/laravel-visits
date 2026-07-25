@@ -51,6 +51,53 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('breakdowns', fn ($breakdowns) => ($breakdowns['utm_source']['google'] ?? null) === 2);
     }
 
+    public function test_campaigns_page_breaks_down_every_utm_dimension(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $visitor = Visitor::factory()->create(['first_seen_at' => now()]);
+        Session::factory()->create([
+            'visitor_id' => $visitor->id,
+            'started_at' => now(),
+            'utm_source' => 'google',
+            'utm_medium' => 'cpc',
+            'utm_campaign' => 'spring_sale',
+            'utm_term' => 'shoes',
+            'utm_content' => 'banner_a',
+            'ref' => 'partner_123',
+        ]);
+
+        $this->artisan('visits:aggregate', ['--date' => 'today']);
+
+        $response = $this->get(route('visits.campaigns'));
+
+        $response->assertOk();
+        $response->assertViewHas('breakdowns', function ($breakdowns) {
+            return ($breakdowns['utm_source']['google'] ?? null) === 1
+                && ($breakdowns['utm_medium']['cpc'] ?? null) === 1
+                && ($breakdowns['utm_campaign']['spring_sale'] ?? null) === 1
+                && ($breakdowns['utm_term']['shoes'] ?? null) === 1
+                && ($breakdowns['utm_content']['banner_a'] ?? null) === 1
+                && ($breakdowns['ref']['partner_123'] ?? null) === 1;
+        });
+    }
+
+    public function test_campaigns_page_defaults_to_sessions_breakdown(): void
+    {
+        $response = $this->get(route('visits.campaigns'));
+
+        $response->assertOk();
+        $response->assertViewHas('breakdownMetric', 'sessions');
+    }
+
+    public function test_campaigns_page_can_switch_to_conversions(): void
+    {
+        $response = $this->get(route('visits.campaigns', ['breakdown_metric' => 'conversions']));
+
+        $response->assertOk();
+        $response->assertViewHas('breakdownMetric', 'conversions');
+    }
+
     public function test_index_reports_bot_session_summary(): void
     {
         Carbon::setTestNow('2026-03-10 12:00:00');
@@ -64,6 +111,28 @@ class DashboardControllerTest extends TestCase
         $response->assertOk();
         $response->assertViewHas('botSessions', 2);
         $response->assertViewHas('botPercentage', fn ($pct) => abs($pct - 66.7) < 0.1);
+    }
+
+    public function test_index_defaults_to_a_thirty_day_range(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('from', fn ($from) => $from->toDateString() === '2026-02-09');
+        $response->assertViewHas('to', fn ($to) => $to->toDateString() === '2026-03-10');
+    }
+
+    public function test_default_range_is_configurable(): void
+    {
+        config(['visits.dashboard.default_range_days' => 7]);
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('from', fn ($from) => $from->toDateString() === '2026-03-04');
     }
 
     public function test_index_breakdown_metric_defaults_to_sessions(): void

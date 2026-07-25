@@ -97,6 +97,7 @@ class VisitsServiceProvider extends ServiceProvider
                 ->name('visits.')
                 ->group(function () {
                     Route::get('/', [DashboardController::class, 'index'])->name('index');
+                    Route::get('/campaigns', [DashboardController::class, 'campaigns'])->name('campaigns');
                     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('sessions');
                     Route::get('/sessions/{id}', [DashboardController::class, 'show'])->name('show');
                     Route::get('/visitors', [DashboardController::class, 'visitors'])->name('visitors');

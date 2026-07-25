@@ -94,7 +94,7 @@ return [
 
     'aggregate' => [
         'dimensions' => [
-            'utm_source', 'utm_medium', 'utm_campaign', 'referrer_host',
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'referrer_host',
             'country_code', 'device_type', 'browser', 'client_type', 'action',
         ],
     ],
@@ -110,6 +110,8 @@ return [
         'path' => env('VISITS_DASHBOARD_PATH', 'visits'),
         'middleware' => ['web'],
         'per_page' => env('VISITS_DASHBOARD_PER_PAGE', 50),
+        // Overview/Campaigns date range when no ?from=/?to= is given.
+        'default_range_days' => env('VISITS_DASHBOARD_DEFAULT_RANGE_DAYS', 30),
     ],
 
     // Public, read-only ifconfig.me-style endpoint (IP/geo/device/UTM detection for the

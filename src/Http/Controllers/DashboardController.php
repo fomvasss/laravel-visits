@@ -12,6 +12,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -79,15 +80,7 @@ class DashboardController extends Controller
             $breakdownDimensions[] = 'action';
         }
 
-        $breakdowns = [];
-        foreach ($breakdownDimensions as $dimension) {
-            $breakdowns[$dimension] = $rows->where('metric', $breakdownMetric)
-                ->where('dimension', $dimension)
-                ->groupBy('dimension_value')
-                ->map(fn ($group) => $group->sum('count'))
-                ->sortDesc()
-                ->take(8);
-        }
+        $breakdowns = $this->computeBreakdowns($rows, $breakdownMetric, $breakdownDimensions);
 
         $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
 
@@ -105,6 +98,34 @@ class DashboardController extends Controller
             'totals', 'trends', 'trendDates', 'breakdowns', 'breakdownMetric', 'from', 'to', 'tenantId', 'tenants',
             'botSessions', 'botPercentage'
         ));
+    }
+
+    /**
+     * All UTM/ref dimensions in one place — index() only surfaces utm_source alongside
+     * unrelated dimensions (country/device/etc), this is for drilling into campaign
+     * attribution specifically (utm_medium, utm_campaign, utm_term, utm_content, ref).
+     */
+    public function campaigns(Request $request): View
+    {
+        [$from, $to] = $this->resolveRange($request);
+        $tenantId = (string) $request->input('tenant', '');
+        $statDailyClass = ModelResolver::statDaily();
+
+        $rows = $statDailyClass::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->where('tenant_id', $tenantId)
+            ->get();
+
+        $breakdownMetric = $request->input('breakdown_metric') === StatDaily::METRIC_CONVERSIONS
+            ? StatDaily::METRIC_CONVERSIONS
+            : StatDaily::METRIC_SESSIONS;
+
+        $breakdownDimensions = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref'];
+
+        $breakdowns = $this->computeBreakdowns($rows, $breakdownMetric, $breakdownDimensions);
+
+        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
+
+        return view('visits::dashboard.campaigns', compact('breakdowns', 'breakdownMetric', 'from', 'to', 'tenantId', 'tenants'));
     }
 
     public function sessions(Request $request): View
@@ -228,9 +249,32 @@ class DashboardController extends Controller
      */
     private function resolveRange(Request $request): array
     {
+        $days = max(1, (int) config('visits.dashboard.default_range_days', 30));
+
         $to = $request->input('to') ? Carbon::parse($request->input('to')) : now();
-        $from = $request->input('from') ? Carbon::parse($request->input('from')) : $to->copy()->subDays(6);
+        $from = $request->input('from') ? Carbon::parse($request->input('from')) : $to->copy()->subDays($days - 1);
 
         return [$from->startOfDay(), $to->startOfDay()];
+    }
+
+    /**
+     * @param  Collection<int, StatDaily>  $rows
+     * @param  string[]  $dimensions
+     * @return array<string, Collection<string, int>>
+     */
+    private function computeBreakdowns(Collection $rows, string $breakdownMetric, array $dimensions): array
+    {
+        $breakdowns = [];
+
+        foreach ($dimensions as $dimension) {
+            $breakdowns[$dimension] = $rows->where('metric', $breakdownMetric)
+                ->where('dimension', $dimension)
+                ->groupBy('dimension_value')
+                ->map(fn ($group) => $group->sum('count'))
+                ->sortDesc()
+                ->take(8);
+        }
+
+        return $breakdowns;
     }
 }

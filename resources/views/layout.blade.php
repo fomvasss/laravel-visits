@@ -18,6 +18,7 @@
 <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center gap-4">
     <a href="{{ route('visits.index') }}" class="font-semibold text-gray-900 dark:text-gray-100 text-base tracking-tight">Visits</a>
     <a href="{{ route('visits.index') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Overview</a>
+    <a href="{{ route('visits.campaigns') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Campaigns</a>
     <a href="{{ route('visits.sessions') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Sessions</a>
     <a href="{{ route('visits.visitors') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Visitors</a>
     <a href="{{ route('visits.me') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Whoami</a>

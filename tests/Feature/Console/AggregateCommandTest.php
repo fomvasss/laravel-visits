@@ -48,6 +48,24 @@ class AggregateCommandTest extends TestCase
         $this->assertSame(1, $this->stat(StatDaily::METRIC_VISITORS, 'utm_source', 'facebook'));
     }
 
+    public function test_aggregates_utm_term_utm_content_and_ref(): void
+    {
+        $visitor = Visitor::factory()->create(['first_seen_at' => now()]);
+        Session::factory()->create([
+            'visitor_id' => $visitor->id,
+            'started_at' => now(),
+            'utm_term' => 'shoes',
+            'utm_content' => 'banner_a',
+            'ref' => 'partner_123',
+        ]);
+
+        $this->artisan('visits:aggregate', ['--date' => 'today'])->assertExitCode(0);
+
+        $this->assertSame(1, $this->stat(StatDaily::METRIC_SESSIONS, 'utm_term', 'shoes'));
+        $this->assertSame(1, $this->stat(StatDaily::METRIC_SESSIONS, 'utm_content', 'banner_a'));
+        $this->assertSame(1, $this->stat(StatDaily::METRIC_SESSIONS, 'ref', 'partner_123'));
+    }
+
     public function test_bots_are_excluded_from_every_metric(): void
     {
         $visitor = Visitor::factory()->create(['is_bot' => false, 'first_seen_at' => now()]);
