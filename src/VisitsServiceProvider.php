@@ -7,6 +7,7 @@ namespace Fomvasss\Visits;
 use Fomvasss\Visits\Console\AggregateCommand;
 use Fomvasss\Visits\Console\CloseStaleSessionsCommand;
 use Fomvasss\Visits\Console\PruneCommand;
+use Fomvasss\Visits\Console\SeedDemoCommand;
 use Fomvasss\Visits\Http\Controllers\CollectController;
 use Fomvasss\Visits\Http\Controllers\DashboardController;
 use Fomvasss\Visits\Http\Middleware\TrackVisit;
@@ -48,6 +49,13 @@ class VisitsServiceProvider extends ServiceProvider
                 AggregateCommand::class,
                 PruneCommand::class,
             ]);
+
+            // dev/testing tool only — never registered outside local/testing
+            if ($this->app->environment('local', 'testing')) {
+                $this->commands([
+                    SeedDemoCommand::class,
+                ]);
+            }
         }
     }
 

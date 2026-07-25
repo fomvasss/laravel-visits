@@ -110,6 +110,7 @@ class AggregateCommand extends Command
             'country_code' => 'country_code',
             'device_type' => 'device_type',
             'browser' => 'browser',
+            'client_type' => 'client_type',
         ], $date, $tenantId));
 
         $sessionsQuery = DB::table('visit_sessions as s')
@@ -126,6 +127,7 @@ class AggregateCommand extends Command
             'country_code' => 's.country_code',
             'device_type' => 's.device_type',
             'browser' => 's.browser',
+            'client_type' => 's.client_type',
         ];
 
         $rows = array_merge($rows, $this->rowsFor(StatDaily::METRIC_SESSIONS, $sessionsQuery, $sessionColumnMap, $date, $tenantId));

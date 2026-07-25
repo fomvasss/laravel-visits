@@ -6,6 +6,17 @@ return [
 
     'enabled' => env('VISITS_ENABLED', true),
 
+    // Override any model with your own subclass (add scopes/traits/relations — e.g. a
+    // multi-tenancy global scope on top of tenant_id) without forking the package. Every
+    // internal relation and write path resolves models through this config, so an override
+    // is picked up consistently everywhere, not just where rows get created.
+    'models' => [
+        'visitor' => \Fomvasss\Visits\Models\Visitor::class,
+        'session' => \Fomvasss\Visits\Models\Session::class,
+        'event' => \Fomvasss\Visits\Models\Event::class,
+        'stat_daily' => \Fomvasss\Visits\Models\StatDaily::class,
+    ],
+
     // Queue connection/name used to dispatch RecordVisitJob.
     'queue' => [
         'connection' => env('VISITS_QUEUE_CONNECTION', config('queue.default')),
@@ -84,7 +95,7 @@ return [
     'aggregate' => [
         'dimensions' => [
             'utm_source', 'utm_medium', 'utm_campaign', 'referrer_host',
-            'country_code', 'device_type', 'browser', 'action',
+            'country_code', 'device_type', 'browser', 'client_type', 'action',
         ],
     ],
 

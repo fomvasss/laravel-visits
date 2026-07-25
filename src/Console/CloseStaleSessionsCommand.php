@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Fomvasss\Visits\Console;
 
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
-use Fomvasss\Visits\Models\Session;
+use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Console\Command;
 
 class CloseStaleSessionsCommand extends Command
@@ -19,8 +19,9 @@ class CloseStaleSessionsCommand extends Command
         $timeoutMinutes = (int) config('visits.session_timeout_minutes', 30);
         $cutoff = now()->subMinutes($timeoutMinutes);
         $count = 0;
+        $sessionClass = ModelResolver::session();
 
-        Session::withoutGlobalScope(WithoutBotsScope::class)
+        $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
             ->whereNull('ended_at')
             ->where('last_activity_at', '<', $cutoff)
             ->chunkById(500, function ($sessions) use (&$count) {

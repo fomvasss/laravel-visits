@@ -38,7 +38,8 @@
   },
   "autoload": {
     "psr-4": {
-      "Fomvasss\\Visits\\": "src/"
+      "Fomvasss\\Visits\\": "src/",
+      "Fomvasss\\Visits\\Database\\Factories\\": "database/factories/"
     }
   },
   "autoload-dev": {

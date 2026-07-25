@@ -13,8 +13,9 @@ return new class extends Migration {
         Schema::create('visit_stats_daily', function (Blueprint $t) {
             $t->id();
             $t->date('date')->index();
-            // stored as empty string (not NULL) when there is no tenant — keeps the unique index reliable,
-            // since NULL != NULL in a MySQL unique index and would allow duplicate rows.
+            // stored as empty string (not NULL) when there is no tenant — keeps the unique index reliable.
+            // NULL never equals NULL in a unique index on MySQL or PostgreSQL, which would let
+            // duplicate "no tenant" rows slip through.
             $t->string('tenant_id')->default('');
             $t->string('metric', 40); // sessions | visitors | page_views | conversions
             // dimension/dimension_value default to '' (not NULL) for the same reason as tenant_id above —

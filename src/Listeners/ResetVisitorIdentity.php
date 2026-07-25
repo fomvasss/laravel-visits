@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Fomvasss\Visits\Listeners;
 
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
-use Fomvasss\Visits\Models\Visitor;
+use Fomvasss\Visits\Support\ModelResolver;
 use Fomvasss\Visits\Support\TokenResolver;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Http\Request;
@@ -30,8 +30,9 @@ class ResetVisitorIdentity
         }
 
         $token = $this->tokenResolver->resolve($this->request);
+        $visitorClass = ModelResolver::visitor();
 
-        Visitor::withoutGlobalScope(WithoutBotsScope::class)
+        $visitorClass::withoutGlobalScope(WithoutBotsScope::class)
             ->where('token', $token)
             ->update(['user_type' => null, 'user_id' => null]);
     }

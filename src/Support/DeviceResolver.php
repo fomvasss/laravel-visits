@@ -12,6 +12,10 @@ use DeviceDetector\DeviceDetector;
  * jaybizzle/crawler-detect combo the legacy projects would have needed.
  *
  * Runs first inside RecordVisitJob, before geo lookup, so bot traffic never pays for it.
+ *
+ * client_type distinguishes real browsers from mobile apps / HTTP libraries / feed readers —
+ * matomo classifies plenty of that traffic as non-bot, so this is orthogonal to is_bot, not a
+ * replacement for it.
  */
 class DeviceResolver
 {
@@ -34,7 +38,11 @@ class DeviceResolver
                 'device_family' => null,
                 'device_model' => null,
                 'platform' => null,
+                'platform_version' => null,
                 'browser' => null,
+                'browser_version' => null,
+                'browser_engine' => null,
+                'client_type' => null,
             ];
         }
 
@@ -46,7 +54,11 @@ class DeviceResolver
             'device_family' => $dd->getBrandName() ?: null,
             'device_model' => $dd->getModel() ?: null,
             'platform' => $dd->getOs('name') ?: null,
+            'platform_version' => $dd->getOs('version') ?: null,
             'browser' => $dd->getClient('name') ?: null,
+            'browser_version' => $dd->getClient('version') ?: null,
+            'browser_engine' => $dd->getClient('engine') ?: null,
+            'client_type' => $dd->getClient('type') ?: null,
         ];
     }
 }

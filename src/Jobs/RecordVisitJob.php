@@ -13,6 +13,7 @@ use Fomvasss\Visits\Models\Session;
 use Fomvasss\Visits\Models\Visitor;
 use Fomvasss\Visits\Support\DeviceResolver;
 use Fomvasss\Visits\Support\GeoResolver;
+use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -94,8 +95,10 @@ class RecordVisitJob implements ShouldQueue
      */
     private function resolveVisitor(array $device, array $geo): Visitor
     {
+        $visitorClass = ModelResolver::visitor();
+
         /** @var Visitor $visitor */
-        $visitor = Visitor::withoutGlobalScope(WithoutBotsScope::class)
+        $visitor = $visitorClass::withoutGlobalScope(WithoutBotsScope::class)
             ->firstOrNew(['token' => $this->payload->token]);
 
         $isNew = ! $visitor->exists;
@@ -109,13 +112,14 @@ class RecordVisitJob implements ShouldQueue
             'timezone' => $geo['timezone'] ?? $visitor->timezone,
             'lat' => $geo['lat'] ?? $visitor->lat,
             'lng' => $geo['lng'] ?? $visitor->lng,
+            'geo_meta' => $this->geoMeta($geo) ?? $visitor->geo_meta,
             'locale' => $this->payload->locale,
             'browser_language' => $this->payload->browserLanguage,
             'device_type' => $device['device_type'],
-            'device_family' => $device['device_family'],
-            'device_model' => $device['device_model'],
             'platform' => $device['platform'],
             'browser' => $device['browser'],
+            'client_type' => $device['client_type'],
+            'device_meta' => $this->deviceMeta($device),
         ]);
 
         if ($isNew) {
@@ -147,8 +151,9 @@ class RecordVisitJob implements ShouldQueue
     private function resolveSession(Visitor $visitor, array $device, array $geo): Session
     {
         $timeoutMinutes = (int) config('visits.session_timeout_minutes', 30);
+        $sessionClass = ModelResolver::session();
 
-        $session = Session::withoutGlobalScope(WithoutBotsScope::class)
+        $session = $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
             ->where('visitor_id', $visitor->id)
             ->whereNull('ended_at')
             ->where('last_activity_at', '>=', now()->subMinutes($timeoutMinutes))
@@ -168,7 +173,7 @@ class RecordVisitJob implements ShouldQueue
         $utm = $this->payload->utm !== [] ? $this->payload->utm : $this->visitorUtm($visitor);
         $extraParams = $this->payload->extraParams !== [] ? $this->payload->extraParams : ($visitor->extra_params ?? []);
 
-        return Session::create([
+        return $sessionClass::create([
             'visitor_id' => $visitor->id,
             'user_type' => $this->payload->authUserType,
             'user_id' => $this->payload->authUserId,
@@ -185,22 +190,62 @@ class RecordVisitJob implements ShouldQueue
             'timezone' => $geo['timezone'] ?? null,
             'lat' => $geo['lat'] ?? null,
             'lng' => $geo['lng'] ?? null,
+            'geo_meta' => $this->geoMeta($geo),
             'locale' => $this->payload->locale,
             'browser_language' => $this->payload->browserLanguage,
             'device_type' => $device['device_type'],
-            'device_family' => $device['device_family'],
-            'device_model' => $device['device_model'],
             'platform' => $device['platform'],
             'browser' => $device['browser'],
+            'client_type' => $device['client_type'],
+            'device_meta' => $this->deviceMeta($device),
             'user_agent' => $this->payload->userAgent,
             'is_bot' => $device['is_bot'],
             ...$this->prefixedUtm($utm),
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $device
+     * @return array<string, mixed>|null
+     */
+    private function deviceMeta(array $device): ?array
+    {
+        $meta = array_filter([
+            'device_family' => $device['device_family'] ?? null,
+            'device_model' => $device['device_model'] ?? null,
+            'platform_version' => $device['platform_version'] ?? null,
+            'browser_version' => $device['browser_version'] ?? null,
+            'browser_engine' => $device['browser_engine'] ?? null,
+        ]);
+
+        return $meta !== [] ? $meta : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $geo
+     * @return array<string, mixed>|null
+     */
+    private function geoMeta(array $geo): ?array
+    {
+        $meta = array_filter([
+            'country_name' => $geo['country_name'] ?? null,
+            'currency_code' => $geo['currency_code'] ?? null,
+            'region_code' => $geo['region_code'] ?? null,
+            'zip_code' => $geo['zip_code'] ?? null,
+            'postal_code' => $geo['postal_code'] ?? null,
+            'metro_code' => $geo['metro_code'] ?? null,
+            'area_code' => $geo['area_code'] ?? null,
+            'driver' => $geo['driver'] ?? null,
+        ]);
+
+        return $meta !== [] ? $meta : null;
+    }
+
     private function createEvent(Visitor $visitor, Session $session, array $device): Event
     {
-        return Event::create([
+        $eventClass = ModelResolver::event();
+
+        return $eventClass::create([
             'session_id' => $session->id,
             'visitor_id' => $visitor->id,
             'type' => $this->payload->type,

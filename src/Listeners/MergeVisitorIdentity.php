@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace Fomvasss\Visits\Listeners;
 
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
-use Fomvasss\Visits\Models\Session;
-use Fomvasss\Visits\Models\Visitor;
+use Fomvasss\Visits\Support\ModelResolver;
 use Fomvasss\Visits\Support\TokenResolver;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Http\Request;
@@ -35,8 +34,9 @@ class MergeVisitorIdentity
         }
 
         $token = $this->tokenResolver->resolve($this->request);
+        $visitorClass = ModelResolver::visitor();
 
-        $visitor = Visitor::withoutGlobalScope(WithoutBotsScope::class)
+        $visitor = $visitorClass::withoutGlobalScope(WithoutBotsScope::class)
             ->where('token', $token)
             ->first();
 
@@ -50,8 +50,9 @@ class MergeVisitorIdentity
         ]);
 
         $timeoutMinutes = (int) config('visits.session_timeout_minutes', 30);
+        $sessionClass = ModelResolver::session();
 
-        Session::withoutGlobalScope(WithoutBotsScope::class)
+        $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
             ->where('visitor_id', $visitor->id)
             ->whereNull('ended_at')
             ->whereNull('user_id')

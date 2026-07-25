@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Fomvasss\Visits\Models;
 
 use Fomvasss\Visits\Concerns\ExcludesBotsByDefault;
+use Fomvasss\Visits\Database\Factories\EventFactory;
+use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,16 +34,21 @@ class Event extends Model
 
     public function session(): BelongsTo
     {
-        return $this->belongsTo(Session::class, 'session_id');
+        return $this->belongsTo(ModelResolver::session(), 'session_id');
     }
 
     public function visitor(): BelongsTo
     {
-        return $this->belongsTo(Visitor::class, 'visitor_id');
+        return $this->belongsTo(ModelResolver::visitor(), 'visitor_id');
     }
 
     public function eventable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    protected static function newFactory(): EventFactory
+    {
+        return EventFactory::new();
     }
 }

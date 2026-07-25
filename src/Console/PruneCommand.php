@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Console;
 
-use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
-use Fomvasss\Visits\Models\Session;
-use Fomvasss\Visits\Models\Visitor;
+use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Console\Command;
 
 /**
@@ -35,13 +33,17 @@ class PruneCommand extends Command
             return self::SUCCESS;
         }
 
-        $events = Event::withoutGlobalScope(WithoutBotsScope::class)
+        $eventClass = ModelResolver::event();
+        $sessionClass = ModelResolver::session();
+        $visitorClass = ModelResolver::visitor();
+
+        $events = $eventClass::withoutGlobalScope(WithoutBotsScope::class)
             ->where('created_at', '<', $cutoff)->delete();
 
-        $sessions = Session::withoutGlobalScope(WithoutBotsScope::class)
+        $sessions = $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
             ->where('started_at', '<', $cutoff)->delete();
 
-        $visitors = Visitor::withoutGlobalScope(WithoutBotsScope::class)
+        $visitors = $visitorClass::withoutGlobalScope(WithoutBotsScope::class)
             ->where('last_seen_at', '<', $cutoff)->delete();
 
         $this->info("Deleted {$events} event(s), {$sessions} session(s), {$visitors} visitor(s).");

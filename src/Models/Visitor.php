@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Fomvasss\Visits\Models;
 
 use Fomvasss\Visits\Concerns\ExcludesBotsByDefault;
+use Fomvasss\Visits\Database\Factories\VisitorFactory;
+use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,6 +25,8 @@ class Visitor extends Model
         'first_seen_at' => 'datetime',
         'last_seen_at' => 'datetime',
         'extra_params' => 'array',
+        'device_meta' => 'array',
+        'geo_meta' => 'array',
         'lat' => 'decimal:7',
         'lng' => 'decimal:7',
         'is_bot' => 'boolean',
@@ -35,11 +39,16 @@ class Visitor extends Model
 
     public function sessions(): HasMany
     {
-        return $this->hasMany(Session::class, 'visitor_id');
+        return $this->hasMany(ModelResolver::session(), 'visitor_id');
     }
 
     public function events(): HasMany
     {
-        return $this->hasMany(Event::class, 'visitor_id');
+        return $this->hasMany(ModelResolver::event(), 'visitor_id');
+    }
+
+    protected static function newFactory(): VisitorFactory
+    {
+        return VisitorFactory::new();
     }
 }

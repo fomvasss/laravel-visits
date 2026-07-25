@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Concerns;
 
-use Fomvasss\Visits\Models\Event;
-use Fomvasss\Visits\Models\Visitor;
+use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
@@ -19,12 +18,12 @@ trait HasVisits
 {
     public function visitEvents(): MorphMany
     {
-        return $this->morphMany(Event::class, 'eventable');
+        return $this->morphMany(ModelResolver::event(), 'eventable');
     }
 
     public function latestVisitEvent(?string $action = null): MorphOne
     {
-        return $this->morphOne(Event::class, 'eventable')
+        return $this->morphOne(ModelResolver::event(), 'eventable')
             ->latestOfMany()
             ->when($action, fn ($query) => $query->where('action', $action));
     }
@@ -36,6 +35,6 @@ trait HasVisits
      */
     public function visitorProfiles(): MorphMany
     {
-        return $this->morphMany(Visitor::class, 'user');
+        return $this->morphMany(ModelResolver::visitor(), 'user');
     }
 }

@@ -32,23 +32,122 @@
             <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ $label }}</div>
                 <div class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ number_format($totals[$key]) }}</div>
+                {{-- fixed-height, position:relative wrapper is required — Chart.js responsive
+                     resize measures this container, and without an explicit height here (only
+                     on the canvas) container-and-canvas heights chase each other and grow
+                     without bound --}}
+                <div class="relative mt-2 h-10 w-full">
+                    <canvas class="viz-sparkline" data-metric="{{ $key }}"></canvas>
+                </div>
             </div>
         @endforeach
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        @foreach(['utm_source' => 'UTM source', 'referrer_host' => 'Referrer', 'country_code' => 'Country', 'device_type' => 'Device'] as $dimension => $label)
+        @foreach(['utm_source' => 'UTM source', 'referrer_host' => 'Referrer', 'country_code' => 'Country', 'device_type' => 'Device', 'client_type' => 'Client type'] as $dimension => $label)
             <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">{{ $label }}</div>
-                @forelse($breakdowns[$dimension] as $value => $count)
-                    <div class="flex justify-between text-xs py-1 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                        <span class="text-gray-700 dark:text-gray-300">{{ $value }}</span>
-                        <span class="text-gray-500 dark:text-gray-400">{{ number_format($count) }}</span>
-                    </div>
-                @empty
+                @if($breakdowns[$dimension]->isEmpty())
                     <div class="text-xs text-gray-400 dark:text-gray-600">No data</div>
-                @endforelse
+                @else
+                    <div class="relative" style="height: {{ max(60, $breakdowns[$dimension]->count() * 28) }}px">
+                        <canvas class="viz-breakdown" data-dimension="{{ $dimension }}"></canvas>
+                    </div>
+                @endif
             </div>
         @endforeach
     </div>
+
+    {{-- table view fallback — see dataviz skill accessibility check: a table equivalent must
+         exist alongside every chart --}}
+    <details class="mt-6 text-xs">
+        <summary class="cursor-pointer text-gray-500 dark:text-gray-400">Show as table</summary>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+            @foreach(['utm_source' => 'UTM source', 'referrer_host' => 'Referrer', 'country_code' => 'Country', 'device_type' => 'Device', 'client_type' => 'Client type'] as $dimension => $label)
+                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div class="font-medium text-gray-500 dark:text-gray-400 mb-2">{{ $label }}</div>
+                    @forelse($breakdowns[$dimension] as $value => $count)
+                        <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                            <span class="text-gray-700 dark:text-gray-300">{{ $value }}</span>
+                            <span class="text-gray-500 dark:text-gray-400">{{ number_format($count) }}</span>
+                        </div>
+                    @empty
+                        <div class="text-gray-400 dark:text-gray-600">No data</div>
+                    @endforelse
+                </div>
+            @endforeach
+        </div>
+    </details>
+
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+        <script>
+            (function () {
+                // sequential blue, single hue — every chart here is one metric's magnitude
+                // (a trend or a category breakdown), never series identity, so one hue is correct
+                // per the dataviz skill's color-formula (no categorical palette needed).
+                const isDark = document.documentElement.classList.contains('dark');
+                const accent = isDark ? '#3987e5' : '#2a78d6';
+                const grid = isDark ? '#2c2c2a' : '#e1e0d9';
+                const ink = isDark ? '#c3c2b7' : '#52514e';
+
+                const trends = @json($trends);
+                document.querySelectorAll('.viz-sparkline').forEach(function (canvas) {
+                    const metric = canvas.dataset.metric;
+                    new Chart(canvas, {
+                        type: 'line',
+                        data: {
+                            labels: trends[metric].map(function (_, i) { return i; }),
+                            datasets: [{
+                                data: trends[metric],
+                                borderColor: accent,
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                tension: 0.25,
+                                fill: true,
+                                backgroundColor: isDark ? 'rgba(57,135,229,0.10)' : 'rgba(42,120,214,0.10)',
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { x: { display: false }, y: { display: false } },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { intersect: false, mode: 'index' },
+                            },
+                        },
+                    });
+                });
+
+                const breakdowns = @json($breakdowns);
+                document.querySelectorAll('.viz-breakdown').forEach(function (canvas) {
+                    const dimension = canvas.dataset.dimension;
+                    const entries = Object.entries(breakdowns[dimension] || {});
+                    new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: entries.map(function (e) { return e[0]; }),
+                            datasets: [{
+                                data: entries.map(function (e) { return e[1]; }),
+                                backgroundColor: accent,
+                                borderRadius: 4,
+                                maxBarThickness: 18,
+                            }],
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { beginAtZero: true, grid: { color: grid }, ticks: { color: ink, precision: 0 } },
+                                y: { grid: { display: false }, ticks: { color: ink } },
+                            },
+                            plugins: { legend: { display: false } },
+                        },
+                    });
+                });
+            })();
+        </script>
+    @endpush
 @endsection

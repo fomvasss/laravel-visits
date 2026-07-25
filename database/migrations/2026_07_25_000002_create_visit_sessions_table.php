@@ -45,15 +45,16 @@ return new class extends Migration {
             $t->string('timezone')->nullable();
             $t->decimal('lat', 10, 7)->nullable();
             $t->decimal('lng', 10, 7)->nullable();
+            $t->json('geo_meta')->nullable();
 
             $t->string('locale', 10)->nullable();
             $t->string('browser_language', 10)->nullable();
 
             $t->string('device_type')->nullable()->index();
-            $t->string('device_family')->nullable();
-            $t->string('device_model')->nullable();
             $t->string('platform')->nullable();
             $t->string('browser')->nullable();
+            $t->string('client_type')->nullable()->index();
+            $t->json('device_meta')->nullable();
             $t->text('user_agent')->nullable();
 
             $t->unsignedInteger('page_views_count')->default(0);

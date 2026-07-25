@@ -14,8 +14,15 @@
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Duration</dt><dd>{{ $session->duration_seconds ? gmdate('H:i:s', $session->duration_seconds) : '—' }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Page views</dt><dd>{{ $session->page_views_count }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">IP</dt><dd>{{ $session->ip }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Country / city</dt><dd>{{ $session->country_code }} / {{ $session->city }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Device</dt><dd>{{ $session->device_type }} · {{ $session->platform }} · {{ $session->browser }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Country / city</dt><dd>{{ $session->geo_meta['country_name'] ?? $session->country_code }} / {{ $session->city }}</dd></div>
+                @if($session->geo_meta['currency_code'] ?? null)
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Currency</dt><dd>{{ $session->geo_meta['currency_code'] }}</dd></div>
+                @endif
+                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Device</dt><dd>{{ $session->device_type }} · {{ $session->platform }}{{ ($v = $session->device_meta['platform_version'] ?? null) ? " $v" : '' }} · {{ $session->browser }}{{ ($v = $session->device_meta['browser_version'] ?? null) ? " $v" : '' }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Client type</dt><dd>{{ $session->client_type }}</dd></div>
+                @if($session->device_meta['device_family'] ?? $session->device_meta['device_model'] ?? null)
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Model</dt><dd>{{ $session->device_meta['device_family'] ?? '' }} {{ $session->device_meta['device_model'] ?? '' }}</dd></div>
+                @endif
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Locale</dt><dd>{{ $session->locale }} ({{ $session->browser_language }})</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Bot</dt><dd>{{ $session->is_bot ? ($session->events->first()?->bot_name ?? 'yes') : 'no' }}</dd></div>
             </dl>

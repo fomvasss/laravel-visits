@@ -48,6 +48,7 @@ class GeoResolver
                 return [];
             }
 
+            // core (dimension-worthy) fields — every driver populates these
             $data = [
                 'country_code' => $position->countryCode ?: null,
                 'region' => $position->regionName ?: null,
@@ -59,6 +60,21 @@ class GeoResolver
                 $data['lat'] = $position->latitude ?: null;
                 $data['lng'] = $position->longitude ?: null;
             }
+
+            // extra detail — populated inconsistently across drivers (e.g. IpApi sets zip_code
+            // + currency_code, MaxMind sets postal_code + metro_code instead), never a useful
+            // rollup dimension. RecordVisitJob folds these into geo_meta json, same split as
+            // device_meta.
+            $data += [
+                'country_name' => $position->countryName ?: null,
+                'currency_code' => $position->currencyCode ?: null,
+                'region_code' => $position->regionCode ?: null,
+                'zip_code' => $position->zipCode ?: null,
+                'postal_code' => $position->postalCode ?: null,
+                'metro_code' => $position->metroCode ?: null,
+                'area_code' => $position->areaCode ?: null,
+                'driver' => $position->driver ?: null,
+            ];
 
             return $data;
         }, rescue: [], report: false);

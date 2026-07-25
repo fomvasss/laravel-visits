@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Fomvasss\Visits\Http\Controllers;
 
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
-use Fomvasss\Visits\Models\Session;
 use Fomvasss\Visits\Models\StatDaily;
+use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -18,18 +18,36 @@ class DashboardController extends Controller
     {
         [$from, $to] = $this->resolveRange($request);
         $tenantId = (string) $request->input('tenant', '');
+        $statDailyClass = ModelResolver::statDaily();
 
-        $rows = StatDaily::whereBetween('date', [$from->toDateString(), $to->toDateString()])
+        $rows = $statDailyClass::whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->where('tenant_id', $tenantId)
             ->get();
 
+        $metrics = [StatDaily::METRIC_VISITORS, StatDaily::METRIC_SESSIONS, StatDaily::METRIC_PAGE_VIEWS, StatDaily::METRIC_CONVERSIONS];
+
         $totals = [];
-        foreach ([StatDaily::METRIC_VISITORS, StatDaily::METRIC_SESSIONS, StatDaily::METRIC_PAGE_VIEWS, StatDaily::METRIC_CONVERSIONS] as $metric) {
+        foreach ($metrics as $metric) {
             $totals[$metric] = (int) $rows->where('metric', $metric)->where('dimension', '')->sum('count');
         }
 
+        // per-day series for the stat-tile sparklines — visit_stats_daily already carries this
+        // granularity, index() used to throw it away by summing straight into $totals
+        $trendDates = collect();
+        for ($cursor = $from->copy(); $cursor->lte($to); $cursor->addDay()) {
+            $trendDates->push($cursor->toDateString());
+        }
+
+        $trends = [];
+        foreach ($metrics as $metric) {
+            $byDate = $rows->where('metric', $metric)->where('dimension', '')
+                ->mapWithKeys(fn ($row) => [$row->date->toDateString() => (int) $row->count]);
+
+            $trends[$metric] = $trendDates->map(fn ($d) => $byDate[$d] ?? 0)->values()->all();
+        }
+
         $breakdowns = [];
-        foreach (['utm_source', 'referrer_host', 'country_code', 'device_type'] as $dimension) {
+        foreach (['utm_source', 'referrer_host', 'country_code', 'device_type', 'client_type'] as $dimension) {
             $breakdowns[$dimension] = $rows->where('metric', StatDaily::METRIC_SESSIONS)
                 ->where('dimension', $dimension)
                 ->groupBy('dimension_value')
@@ -38,14 +56,15 @@ class DashboardController extends Controller
                 ->take(8);
         }
 
-        $tenants = StatDaily::distinct()->orderBy('tenant_id')->pluck('tenant_id');
+        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
 
-        return view('visits::dashboard.index', compact('totals', 'breakdowns', 'from', 'to', 'tenantId', 'tenants'));
+        return view('visits::dashboard.index', compact('totals', 'trends', 'breakdowns', 'from', 'to', 'tenantId', 'tenants'));
     }
 
     public function sessions(Request $request): View
     {
-        $query = Session::query()->with('visitor')->latest('started_at');
+        $sessionClass = ModelResolver::session();
+        $query = $sessionClass::query()->with('visitor')->latest('started_at');
 
         if ($request->boolean('with_bots')) {
             $query->withBots();
@@ -72,7 +91,9 @@ class DashboardController extends Controller
 
     public function show(int $id): View
     {
-        $session = Session::withoutGlobalScope(WithoutBotsScope::class)
+        $sessionClass = ModelResolver::session();
+
+        $session = $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
             ->with(['visitor', 'events' => fn ($q) => $q->withBots()->oldest('created_at')])
             ->findOrFail($id);
 
