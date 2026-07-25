@@ -2,6 +2,18 @@
 
 Deeper detail for setups beyond the common same-origin Blade app — see the main [README](../README.md) for installation, the basic JS beacon, and everything else.
 
+## Skipping the JS beacon entirely
+
+`visits.js` is a thin convenience wrapper around `POST /visits/collect` — nothing on the server requires it specifically. Any HTTP client (`fetch`, `axios`, a mobile HTTP client, `curl`) can call the endpoint directly with the same JSON body; every raw-HTTP example in this doc works with no JS file involved at all.
+
+Replicate three things yourself if you skip it:
+
+- **Persist `visitor_token`** from the response (`{"visitor_token": "..."}`) and send it back as the `X-Visitor-Token` header on every subsequent call — without it, each request with no token/cookie creates a brand new `Visitor`.
+- **Send the CSRF header** (`X-CSRF-TOKEN`) if the route is still under the `web` middleware group — not needed once `collect.middleware` is swapped away from `web` (see below).
+- **Match the expected payload shape**: `{"type": "page_view"|"action", "name": "...", "url": "...", "meta": {...}}` (validated in `CollectController`).
+
+What the beacon adds on top, purely for convenience: the `VisitsQueue` buffer, automatic page-view tracking on page `load`, and silently swallowing failed requests so a network error never breaks the page.
+
 ## API-only backends, decoupled SPAs & mobile apps
 
 `POST /visits/collect` runs under the `web` middleware group by default, which brings CSRF/session along — fine for a same-origin Blade app, but it will 419 for a token-authenticated API, a SPA on a different origin, or a native mobile app that has no session at all. Since the identity mechanism is already cookie-free-capable (client-supplied `X-Visitor-Token` in, `visitor_token` in the JSON body out), the only thing actually in the way is that hardcoded `web` group — swap it in config:

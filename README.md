@@ -6,6 +6,8 @@
 
 Visitor/session/pageview tracking for Laravel: async-first, cookie + client-token identity, geo, device & bot detection, campaign (UTM) attribution, custom conversion events, rollup analytics, and a built-in dashboard — including a live activity map.
 
+[Українська документація](README.uk.md)
+
 ## Features
 
 - **Three-tier data model** — Visitor (durable, cross-session identity) → Session (one browsing session) → Event (page view or custom action), instead of one flat "visits" table.
@@ -25,7 +27,7 @@ Visitor/session/pageview tracking for Laravel: async-first, cookie + client-toke
 
 - PHP ^8.3
 - Laravel ^12.0 or ^13.0
-- A configured queue connection (tracking is dispatched to a queue by default — see [Queue](#queue))
+- A configured queue connection (tracking is dispatched to a queue by default — see the `queue` key in [Configuration](#configuration))
 
 ## Installation
 
@@ -80,6 +82,12 @@ A request comes in through the `TrackVisit` middleware (or `POST /visits/collect
 
 ## Tracking
 
+Which mechanism to use depends on what kind of app is on the other end:
+
+- **A Blade/server-rendered site** — use the `TrackVisit` middleware ([below](#automatic-page-views)). It's automatic: every `GET` is a full page load, so there's a real server request to hang tracking off of, no extra code needed.
+- **An API backend behind a SPA or mobile app** — the middleware doesn't apply. A `GET` to an API endpoint (`GET /api/products`) is a data fetch, not a page view, and typically lives under the `api` middleware group anyway, which `TrackVisit` never touches. Track page views explicitly instead: the [JS beacon](#js-beacon) (`Visits.trackPageView()`) on route change for a SPA, or a direct `POST /visits/collect` call for a mobile app (see [`docs/client-integration.md`](docs/client-integration.md)).
+- **Custom actions/conversions, on any of the above** — always [`Visits::track()`](#custom-actions-server-side), called from wherever the business event actually happens server-side (a controller, a job, a webhook handler) — regardless of whether the request that triggered it was a Blade form post, an API call, or a queued job with no request at all.
+
 ### Automatic page views
 
 Any `GET` request through the `web` middleware group is tracked automatically, except paths matching `visits.exclude_paths` (admin/debugbar/horizon/health-check paths are excluded by default) — and the package's own dashboard/whoami paths, which are always excluded regardless of `exclude_paths` (otherwise browsing `/visits` would itself generate page-view rows about viewing the dashboard).
@@ -129,7 +137,7 @@ If you'd rather queue calls the way GTM's `dataLayer` works (e.g. loading `visit
 
 ### Beyond a same-origin Blade app
 
-For an API-only backend, a decoupled SPA/mobile app, a backend serving both a web app and an API, or a frontend on a different domain than the API — see [`docs/client-integration.md`](docs/client-integration.md) for the config and CORS/CSRF specifics each of those needs.
+The beacon is optional — `POST /visits/collect` is a plain JSON endpoint, callable directly with any HTTP client. For an API-only backend, a decoupled SPA/mobile app, a backend serving both a web app and an API, or a frontend on a different domain than the API — see [`docs/client-integration.md`](docs/client-integration.md) for what to replicate yourself and the config/CORS/CSRF specifics each of those needs.
 
 ### Identity resolution
 
@@ -393,4 +401,4 @@ If this package is useful to you, consider supporting its development:
 
 ## License
 
-MIT.
+MIT — see [LICENSE](LICENSE.md).

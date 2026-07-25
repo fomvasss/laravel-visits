@@ -240,6 +240,7 @@ return [
     'collect' => [
         'middleware' => ['web'],
         'allowed_origins' => null,
+        // 'allowed_origins' => ['https://example.com', 'https://app.example.com'],
     ],
 
     /*
