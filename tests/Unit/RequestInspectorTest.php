@@ -56,6 +56,15 @@ class RequestInspectorTest extends TestCase
         $this->assertSame('Googlebot', $data['bot']['bot_name']);
     }
 
+    public function test_geo_is_null_when_the_lookup_misses(): void
+    {
+        Location::fake([]);
+
+        $data = $this->inspector()->inspect(Request::create('/'));
+
+        $this->assertNull($data['geo']);
+    }
+
     public function test_visitor_token_is_null_when_nothing_supplied(): void
     {
         Location::fake([]);

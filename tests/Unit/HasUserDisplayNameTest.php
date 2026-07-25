@@ -28,7 +28,7 @@ class HasUserDisplayNameTest extends TestCase
         $this->assertNull($visitor->userDisplayName());
     }
 
-    public function test_uses_configured_attribute_by_default(): void
+    public function test_uses_the_default_resolver_by_default(): void
     {
         $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
         $visitor = Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
@@ -36,7 +36,7 @@ class HasUserDisplayNameTest extends TestCase
         $this->assertSame('Vas', $visitor->userDisplayName());
     }
 
-    public function test_falls_back_to_email_when_attribute_is_empty(): void
+    public function test_default_resolver_falls_back_to_email_when_name_is_empty(): void
     {
         $user = TestUser::create(['name' => null, 'email' => 'vas@example.test']);
         $visitor = Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
@@ -44,7 +44,7 @@ class HasUserDisplayNameTest extends TestCase
         $this->assertSame('vas@example.test', $visitor->userDisplayName());
     }
 
-    public function test_returns_null_when_neither_attribute_nor_email_present(): void
+    public function test_default_resolver_returns_null_when_neither_name_nor_email_present(): void
     {
         $user = TestUser::create(['name' => null, 'email' => null]);
         $visitor = Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
@@ -52,17 +52,7 @@ class HasUserDisplayNameTest extends TestCase
         $this->assertNull($visitor->userDisplayName());
     }
 
-    public function test_respects_custom_display_attribute_config(): void
-    {
-        config(['visits.user_display_attribute' => 'first_name']);
-
-        $user = TestUser::create(['first_name' => 'Vasyl', 'name' => 'Vas', 'email' => 'vas@example.test']);
-        $visitor = Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
-
-        $this->assertSame('Vasyl', $visitor->userDisplayName());
-    }
-
-    public function test_resolver_class_takes_priority_over_attribute(): void
+    public function test_respects_a_custom_resolver_class(): void
     {
         config(['visits.user_display_resolver' => FullNameResolver::class]);
 

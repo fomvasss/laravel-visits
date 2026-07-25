@@ -60,7 +60,11 @@ class RequestInspector
                 'browser_engine' => $device['browser_engine'],
                 'client_type' => $device['client_type'],
             ],
-            'geo' => $geo,
+            // null (not []) when the lookup couldn't determine a location — geo is a single
+            // cohesive result, "determined nothing" is a different state than "determined an
+            // empty location". Unlike tracking_params.utm/extra below, where an empty object is
+            // itself a meaningful, normal state (no params were present on this request).
+            'geo' => $geo !== [] ? $geo : null,
             'locale' => $locale,
             'referrer' => $request->header('referer'),
             'tracking_params' => [

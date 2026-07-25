@@ -22,6 +22,10 @@ class WhoAmIController extends Controller
         $ip = $request->input('ip');
         $ip = is_string($ip) && filter_var($ip, FILTER_VALIDATE_IP) ? $ip : null;
 
-        return response()->json($visits->whoami($request, $ip));
+        // every nested field here (geo, tracking_params.utm/extra, ...) is an object, never a
+        // list — without JSON_FORCE_OBJECT, PHP's json_encode() renders an empty array as `[]`
+        // instead of `{}` (e.g. geo when the lookup misses), which is a type-inconsistent shape
+        // for API consumers to deserialize
+        return response()->json($visits->whoami($request, $ip), 200, [], JSON_FORCE_OBJECT);
     }
 }

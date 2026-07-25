@@ -87,4 +87,29 @@ class WhoAmIControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonMissing(['ip' => 'not-an-ip']);
     }
+
+    public function test_geo_is_null_when_the_lookup_misses(): void
+    {
+        Location::fake([]); // guarantees a geo miss
+
+        $response = $this->getJson(route('visits.whoami'));
+
+        $response->assertOk();
+        $response->assertJson(['geo' => null]);
+    }
+
+    public function test_empty_tracking_params_encode_as_objects_not_arrays(): void
+    {
+        Location::fake([]);
+
+        $response = $this->getJson(route('visits.whoami'));
+
+        $response->assertOk();
+        // a naive response()->json() would render an empty PHP array as `[]`, not `{}` — a
+        // type-inconsistent shape for API consumers. Unlike geo (null when unknown),
+        // "no UTM params present" is itself a normal, meaningful empty state, so this one
+        // legitimately stays an (empty) object rather than becoming null.
+        $this->assertStringContainsString('"utm":{}', $response->getContent());
+        $this->assertStringContainsString('"extra":{}', $response->getContent());
+    }
 }

@@ -7,13 +7,10 @@ namespace Fomvasss\Visits\Concerns;
 /**
  * The package only knows user_type/user_id (polymorphic — could be App\Models\User,
  * Admin, Client, anything the host uses), never the host's field naming convention.
- *
- * Two levels of override, cheapest first:
- * - config('visits.user_display_attribute') — a single attribute/accessor name (default
- *   'name'), falls back to `email`, then null.
- * - config('visits.user_display_resolver') — a class implementing
- *   UserDisplayNameResolverInterface, for anything the single-attribute path can't express
- *   (combine fields, call a fullname()-style accessor explicitly, etc).
+ * Actual name resolution always goes through config('visits.user_display_resolver') — a
+ * class implementing UserDisplayNameResolverInterface, defaulting to the package's own
+ * DefaultUserDisplayNameResolver (name -> email -> null). Swap the config for anything else
+ * (a different attribute, combining fields, calling a fullname()-style accessor, etc).
  */
 trait HasUserDisplayName
 {
@@ -31,12 +28,6 @@ trait HasUserDisplayName
             return null;
         }
 
-        if ($resolverClass = config('visits.user_display_resolver')) {
-            return app($resolverClass)->resolve($user);
-        }
-
-        $attribute = config('visits.user_display_attribute', 'name');
-
-        return $user->{$attribute} ?? $user->email ?? null;
+        return app(config('visits.user_display_resolver'))->resolve($user);
     }
 }
