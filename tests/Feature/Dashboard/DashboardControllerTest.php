@@ -113,6 +113,55 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('botPercentage', fn ($pct) => abs($pct - 66.7) < 0.1);
     }
 
+    public function test_index_map_includes_only_sessions_with_coordinates(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        Session::factory()->create(['started_at' => now(), 'lat' => '50.4501', 'lng' => '30.5234']);
+        Session::factory()->create(['started_at' => now(), 'lat' => null, 'lng' => null]);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('mapMarkers', fn ($markers) => $markers->count() === 1
+            && $markers->first()['lat'] === 50.4501);
+    }
+
+    public function test_index_map_excludes_bots(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        Session::factory()->create(['started_at' => now(), 'lat' => '50.45', 'lng' => '30.52', 'is_bot' => false]);
+        Session::factory()->create(['started_at' => now(), 'lat' => '10.0', 'lng' => '10.0', 'is_bot' => true]);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('mapMarkers', fn ($markers) => $markers->count() === 1);
+    }
+
+    public function test_index_map_respects_the_marker_limit(): void
+    {
+        config(['visits.dashboard.map_marker_limit' => 2]);
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        Session::factory()->count(3)->create(['started_at' => now(), 'lat' => '10.0', 'lng' => '10.0']);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('mapMarkers', fn ($markers) => $markers->count() === 2);
+    }
+
+    public function test_index_shows_a_message_when_no_location_data_present(): void
+    {
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertSee('No location data for this period');
+        $response->assertDontSee('id="visits-map"', false);
+    }
+
     public function test_index_defaults_to_a_thirty_day_range(): void
     {
         Carbon::setTestNow('2026-03-10 12:00:00');
@@ -445,6 +494,131 @@ class DashboardControllerTest extends TestCase
     public function test_show_visitor_404s_for_unknown_id(): void
     {
         $this->get(route('visits.visitor', 999999))->assertNotFound();
+    }
+
+    public function test_live_page_renders(): void
+    {
+        $this->get(route('visits.live'))->assertOk();
+    }
+
+    public function test_live_feed_returns_events_created_after_since(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $session = Session::factory()->create(['lat' => '50.45', 'lng' => '30.52']);
+        $old = Event::factory()->create([
+            'session_id' => $session->id,
+            'visitor_id' => $session->visitor_id,
+            'created_at' => now()->subMinutes(5),
+        ]);
+        $recent = Event::factory()->create([
+            'session_id' => $session->id,
+            'visitor_id' => $session->visitor_id,
+            'name' => 'order.placed',
+            'type' => Event::TYPE_ACTION,
+            'created_at' => now(),
+        ]);
+
+        $response = $this->getJson(route('visits.live.feed', ['since' => now()->subMinute()->toIso8601String()]));
+
+        $response->assertOk();
+        $events = $response->json('events');
+        $this->assertCount(1, $events);
+        $this->assertSame('order.placed', $events[0]['name']);
+        $this->assertSame(50.45, $events[0]['lat']);
+    }
+
+    public function test_live_feed_excludes_events_without_session_coordinates(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $session = Session::factory()->create(['lat' => null, 'lng' => null]);
+        Event::factory()->create([
+            'session_id' => $session->id,
+            'visitor_id' => $session->visitor_id,
+            'created_at' => now(),
+        ]);
+
+        $response = $this->getJson(route('visits.live.feed', ['since' => now()->subMinute()->toIso8601String()]));
+
+        $response->assertOk();
+        $response->assertJson(['events' => []]);
+    }
+
+    public function test_live_feed_excludes_bots(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $session = Session::factory()->create(['lat' => '50.45', 'lng' => '30.52']);
+        Event::factory()->bot()->create([
+            'session_id' => $session->id,
+            'visitor_id' => $session->visitor_id,
+            'created_at' => now(),
+        ]);
+
+        $response = $this->getJson(route('visits.live.feed', ['since' => now()->subMinute()->toIso8601String()]));
+
+        $response->assertOk();
+        $response->assertJson(['events' => []]);
+    }
+
+    public function test_live_feed_defaults_since_to_thirty_seconds_ago(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $session = Session::factory()->create(['lat' => '50.45', 'lng' => '30.52']);
+        Event::factory()->create([
+            'session_id' => $session->id,
+            'visitor_id' => $session->visitor_id,
+            'created_at' => now()->subSeconds(45),
+        ]);
+        $recent = Event::factory()->create([
+            'session_id' => $session->id,
+            'visitor_id' => $session->visitor_id,
+            'created_at' => now()->subSeconds(10),
+        ]);
+
+        $response = $this->getJson(route('visits.live.feed'));
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('events'));
+    }
+
+    public function test_live_feed_degrades_gracefully_on_an_unparseable_since(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        $session = Session::factory()->create(['lat' => '50.45', 'lng' => '30.52']);
+        Event::factory()->create([
+            'session_id' => $session->id,
+            'visitor_id' => $session->visitor_id,
+            'created_at' => now()->subSeconds(10),
+        ]);
+
+        // this is exactly the value a client would send if it forgot to URL-encode a '+00:00'
+        // offset — the '+' becomes a literal space, which Carbon can't parse
+        $response = $this->getJson(route('visits.live.feed', ['since' => '2026-03-10T11:59:00 00:00']));
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('events'));
+    }
+
+    public function test_live_stream_route_exists(): void
+    {
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('visits.live.stream'));
+    }
+
+    public function test_live_stream_returns_sse_headers(): void
+    {
+        // sse_max_duration=0 makes the stream loop's while-condition false immediately (the
+        // deadline is already "now" by the time it's checked) — the callback returns without
+        // ever sleeping, so this test can't hang regardless of the loop body.
+        config(['visits.live.sse_max_duration' => 0]);
+
+        $response = $this->get(route('visits.live.stream'));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/event-stream; charset=UTF-8');
     }
 
     public function test_whoami_page_renders_and_writes_nothing(): void

@@ -103,6 +103,11 @@ class VisitsServiceProvider extends ServiceProvider
                     Route::get('/visitors', [DashboardController::class, 'visitors'])->name('visitors');
                     Route::get('/visitors/{id}', [DashboardController::class, 'showVisitor'])->name('visitor');
                     Route::get('/me', [DashboardController::class, 'whoami'])->name('me');
+                    if (config('visits.live.enabled', true)) {
+                        Route::get('/live', [DashboardController::class, 'live'])->name('live');
+                        Route::get('/live/feed', [DashboardController::class, 'liveFeed'])->name('live.feed');
+                        Route::get('/live/stream', [DashboardController::class, 'liveStream'])->name('live.stream');
+                    }
                 });
         }
     }

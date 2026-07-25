@@ -1,0 +1,68 @@
+[
+    {"country_code": "US", "country_name": "United States", "region": "California", "city": "Los Angeles", "timezone": "America/Los_Angeles", "lat": 34.0522, "lng": -118.2437},
+    {"country_code": "US", "country_name": "United States", "region": "California", "city": "San Francisco", "timezone": "America/Los_Angeles", "lat": 37.7749, "lng": -122.4194},
+    {"country_code": "US", "country_name": "United States", "region": "Washington", "city": "Seattle", "timezone": "America/Los_Angeles", "lat": 47.6062, "lng": -122.3321},
+    {"country_code": "US", "country_name": "United States", "region": "New York", "city": "New York", "timezone": "America/New_York", "lat": 40.7128, "lng": -74.0060},
+    {"country_code": "US", "country_name": "United States", "region": "Massachusetts", "city": "Boston", "timezone": "America/New_York", "lat": 42.3601, "lng": -71.0589},
+    {"country_code": "US", "country_name": "United States", "region": "Florida", "city": "Miami", "timezone": "America/New_York", "lat": 25.7617, "lng": -80.1918},
+    {"country_code": "US", "country_name": "United States", "region": "Illinois", "city": "Chicago", "timezone": "America/Chicago", "lat": 41.8781, "lng": -87.6298},
+    {"country_code": "US", "country_name": "United States", "region": "Texas", "city": "Austin", "timezone": "America/Chicago", "lat": 30.2672, "lng": -97.7431},
+
+    {"country_code": "CA", "country_name": "Canada", "region": "Ontario", "city": "Toronto", "timezone": "America/Toronto", "lat": 43.6532, "lng": -79.3832},
+    {"country_code": "CA", "country_name": "Canada", "region": "British Columbia", "city": "Vancouver", "timezone": "America/Vancouver", "lat": 49.2827, "lng": -123.1207},
+    {"country_code": "MX", "country_name": "Mexico", "region": "Mexico City", "city": "Mexico City", "timezone": "America/Mexico_City", "lat": 19.4326, "lng": -99.1332},
+    {"country_code": "BR", "country_name": "Brazil", "region": "Sao Paulo", "city": "Sao Paulo", "timezone": "America/Sao_Paulo", "lat": -23.5505, "lng": -46.6333},
+    {"country_code": "AR", "country_name": "Argentina", "region": "Buenos Aires", "city": "Buenos Aires", "timezone": "America/Argentina/Buenos_Aires", "lat": -34.6037, "lng": -58.3816},
+
+    {"country_code": "UA", "country_name": "Ukraine", "region": "Kyiv", "city": "Kyiv", "timezone": "Europe/Kyiv", "lat": 50.4501, "lng": 30.5234},
+    {"country_code": "UA", "country_name": "Ukraine", "region": "Lviv Oblast", "city": "Lviv", "timezone": "Europe/Kyiv", "lat": 49.8397, "lng": 24.0297},
+    {"country_code": "UA", "country_name": "Ukraine", "region": "Odesa Oblast", "city": "Odesa", "timezone": "Europe/Kyiv", "lat": 46.4825, "lng": 30.7233},
+    {"country_code": "UA", "country_name": "Ukraine", "region": "Kharkiv Oblast", "city": "Kharkiv", "timezone": "Europe/Kyiv", "lat": 49.9935, "lng": 36.2304},
+
+    {"country_code": "DE", "country_name": "Germany", "region": "Berlin", "city": "Berlin", "timezone": "Europe/Berlin", "lat": 52.5200, "lng": 13.4050},
+    {"country_code": "DE", "country_name": "Germany", "region": "Bavaria", "city": "Munich", "timezone": "Europe/Berlin", "lat": 48.1351, "lng": 11.5820},
+    {"country_code": "DE", "country_name": "Germany", "region": "Hamburg", "city": "Hamburg", "timezone": "Europe/Berlin", "lat": 53.5511, "lng": 9.9937},
+    {"country_code": "DE", "country_name": "Germany", "region": "Hesse", "city": "Frankfurt", "timezone": "Europe/Berlin", "lat": 50.1109, "lng": 8.6821},
+
+    {"country_code": "GB", "country_name": "United Kingdom", "region": "England", "city": "London", "timezone": "Europe/London", "lat": 51.5074, "lng": -0.1278},
+    {"country_code": "GB", "country_name": "United Kingdom", "region": "England", "city": "Manchester", "timezone": "Europe/London", "lat": 53.4808, "lng": -2.2426},
+    {"country_code": "GB", "country_name": "United Kingdom", "region": "Scotland", "city": "Edinburgh", "timezone": "Europe/London", "lat": 55.9533, "lng": -3.1883},
+
+    {"country_code": "PL", "country_name": "Poland", "region": "Mazovia", "city": "Warsaw", "timezone": "Europe/Warsaw", "lat": 52.2297, "lng": 21.0122},
+    {"country_code": "PL", "country_name": "Poland", "region": "Lesser Poland", "city": "Krakow", "timezone": "Europe/Warsaw", "lat": 50.0647, "lng": 19.9450},
+    {"country_code": "PL", "country_name": "Poland", "region": "Lower Silesia", "city": "Wroclaw", "timezone": "Europe/Warsaw", "lat": 51.1079, "lng": 17.0385},
+
+    {"country_code": "FR", "country_name": "France", "region": "Ile-de-France", "city": "Paris", "timezone": "Europe/Paris", "lat": 48.8566, "lng": 2.3522},
+    {"country_code": "FR", "country_name": "France", "region": "Auvergne-Rhone-Alpes", "city": "Lyon", "timezone": "Europe/Paris", "lat": 45.7640, "lng": 4.8357},
+    {"country_code": "FR", "country_name": "France", "region": "Provence-Alpes-Cote d'Azur", "city": "Marseille", "timezone": "Europe/Paris", "lat": 43.2965, "lng": 5.3698},
+
+    {"country_code": "ES", "country_name": "Spain", "region": "Madrid", "city": "Madrid", "timezone": "Europe/Madrid", "lat": 40.4168, "lng": -3.7038},
+    {"country_code": "ES", "country_name": "Spain", "region": "Catalonia", "city": "Barcelona", "timezone": "Europe/Madrid", "lat": 41.3874, "lng": 2.1686},
+
+    {"country_code": "IT", "country_name": "Italy", "region": "Lazio", "city": "Rome", "timezone": "Europe/Rome", "lat": 41.9028, "lng": 12.4964},
+    {"country_code": "IT", "country_name": "Italy", "region": "Lombardy", "city": "Milan", "timezone": "Europe/Rome", "lat": 45.4642, "lng": 9.1900},
+
+    {"country_code": "NL", "country_name": "Netherlands", "region": "North Holland", "city": "Amsterdam", "timezone": "Europe/Amsterdam", "lat": 52.3676, "lng": 4.9041},
+    {"country_code": "CZ", "country_name": "Czechia", "region": "Prague", "city": "Prague", "timezone": "Europe/Prague", "lat": 50.0755, "lng": 14.4378},
+    {"country_code": "SE", "country_name": "Sweden", "region": "Stockholm", "city": "Stockholm", "timezone": "Europe/Stockholm", "lat": 59.3293, "lng": 18.0686},
+    {"country_code": "AT", "country_name": "Austria", "region": "Vienna", "city": "Vienna", "timezone": "Europe/Vienna", "lat": 48.2082, "lng": 16.3738},
+    {"country_code": "PT", "country_name": "Portugal", "region": "Lisbon", "city": "Lisbon", "timezone": "Europe/Lisbon", "lat": 38.7223, "lng": -9.1393},
+    {"country_code": "IE", "country_name": "Ireland", "region": "Leinster", "city": "Dublin", "timezone": "Europe/Dublin", "lat": 53.3498, "lng": -6.2603},
+    {"country_code": "BE", "country_name": "Belgium", "region": "Brussels", "city": "Brussels", "timezone": "Europe/Brussels", "lat": 50.8503, "lng": 4.3517},
+    {"country_code": "CH", "country_name": "Switzerland", "region": "Zurich", "city": "Zurich", "timezone": "Europe/Zurich", "lat": 47.3769, "lng": 8.5417},
+    {"country_code": "NO", "country_name": "Norway", "region": "Oslo", "city": "Oslo", "timezone": "Europe/Oslo", "lat": 59.9139, "lng": 10.7522},
+    {"country_code": "DK", "country_name": "Denmark", "region": "Capital Region", "city": "Copenhagen", "timezone": "Europe/Copenhagen", "lat": 55.6761, "lng": 12.5683},
+    {"country_code": "FI", "country_name": "Finland", "region": "Uusimaa", "city": "Helsinki", "timezone": "Europe/Helsinki", "lat": 60.1699, "lng": 24.9384},
+
+    {"country_code": "JP", "country_name": "Japan", "region": "Tokyo", "city": "Tokyo", "timezone": "Asia/Tokyo", "lat": 35.6762, "lng": 139.6503},
+    {"country_code": "KR", "country_name": "South Korea", "region": "Seoul", "city": "Seoul", "timezone": "Asia/Seoul", "lat": 37.5665, "lng": 126.9780},
+    {"country_code": "SG", "country_name": "Singapore", "region": "Singapore", "city": "Singapore", "timezone": "Asia/Singapore", "lat": 1.3521, "lng": 103.8198},
+    {"country_code": "IN", "country_name": "India", "region": "Maharashtra", "city": "Mumbai", "timezone": "Asia/Kolkata", "lat": 19.0760, "lng": 72.8777},
+    {"country_code": "AE", "country_name": "United Arab Emirates", "region": "Dubai", "city": "Dubai", "timezone": "Asia/Dubai", "lat": 25.2048, "lng": 55.2708},
+
+    {"country_code": "AU", "country_name": "Australia", "region": "New South Wales", "city": "Sydney", "timezone": "Australia/Sydney", "lat": -33.8688, "lng": 151.2093},
+    {"country_code": "AU", "country_name": "Australia", "region": "Victoria", "city": "Melbourne", "timezone": "Australia/Melbourne", "lat": -37.8136, "lng": 144.9631},
+
+    {"country_code": "ZA", "country_name": "South Africa", "region": "Gauteng", "city": "Johannesburg", "timezone": "Africa/Johannesburg", "lat": -26.2041, "lng": 28.0473},
+    {"country_code": "EG", "country_name": "Egypt", "region": "Cairo", "city": "Cairo", "timezone": "Africa/Cairo", "lat": 30.0444, "lng": 31.2357}
+]

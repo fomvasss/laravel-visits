@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Database\Factories;
 
+use Fomvasss\Visits\Database\Factories\Concerns\HasDemoLocations;
 use Fomvasss\Visits\Models\Visitor;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -13,13 +14,15 @@ use Illuminate\Support\Str;
  */
 class VisitorFactory extends Factory
 {
+    use HasDemoLocations;
+
     protected $model = Visitor::class;
 
     public function definition(): array
     {
         $firstSeen = fake()->dateTimeBetween('-30 days', '-1 hours');
         $utmSource = fake()->optional(0.6)->randomElement(['google', 'facebook', 'newsletter', 'twitter', 'partner_site']);
-        $country = fake()->randomElement($this->countries());
+        $location = fake()->randomElement($this->demoLocations());
         $device = fake()->randomElement($this->devices());
 
         return [
@@ -42,13 +45,13 @@ class VisitorFactory extends Factory
             'extra_params' => fake()->optional(0.2)->passthrough([
                 fake()->randomElement(['gclid', 'fbclid', 'msclkid', 'ttclid']) => Str::random(20),
             ]),
-            'country_code' => $country['country_code'],
-            'region' => $country['region'],
-            'city' => $country['city'],
-            'timezone' => $country['timezone'],
-            'lat' => fake()->latitude(),
-            'lng' => fake()->longitude(),
-            'geo_meta' => ['country_name' => $country['country_name'], 'driver' => 'demo-seed'],
+            'country_code' => $location['country_code'],
+            'region' => $location['region'],
+            'city' => $location['city'],
+            'timezone' => $location['timezone'],
+            'lat' => $this->jitterCoordinate($location['lat']),
+            'lng' => $this->jitterCoordinate($location['lng']),
+            'geo_meta' => ['country_name' => $location['country_name'], 'driver' => 'demo-seed'],
             'locale' => fake()->randomElement(['uk', 'en', 'de', 'pl']),
             'browser_language' => fake()->randomElement(['uk', 'en', 'de', 'pl']),
             'device_type' => $device['device_type'],
@@ -63,21 +66,6 @@ class VisitorFactory extends Factory
     public function bot(): static
     {
         return $this->state(fn () => ['is_bot' => true]);
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function countries(): array
-    {
-        return [
-            ['country_code' => 'US', 'country_name' => 'United States', 'region' => 'California', 'city' => 'Los Angeles', 'timezone' => 'America/Los_Angeles'],
-            ['country_code' => 'UA', 'country_name' => 'Ukraine', 'region' => 'Kyiv', 'city' => 'Kyiv', 'timezone' => 'Europe/Kyiv'],
-            ['country_code' => 'DE', 'country_name' => 'Germany', 'region' => 'Berlin', 'city' => 'Berlin', 'timezone' => 'Europe/Berlin'],
-            ['country_code' => 'GB', 'country_name' => 'United Kingdom', 'region' => 'England', 'city' => 'London', 'timezone' => 'Europe/London'],
-            ['country_code' => 'PL', 'country_name' => 'Poland', 'region' => 'Mazovia', 'city' => 'Warsaw', 'timezone' => 'Europe/Warsaw'],
-            ['country_code' => 'FR', 'country_name' => 'France', 'region' => 'Ile-de-France', 'city' => 'Paris', 'timezone' => 'Europe/Paris'],
-        ];
     }
 
     /**

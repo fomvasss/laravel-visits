@@ -9,13 +9,126 @@ use Fomvasss\Visits\Models\StatDaily;
 use Fomvasss\Visits\Support\ModelResolver;
 use Fomvasss\Visits\VisitsManager;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DashboardController extends Controller
 {
+    public function live(): View
+    {
+        return view('visits::dashboard.live');
+    }
+
+    /**
+     * Polled by the /visits/live page (transport=poll) — recently processed events with a known
+     * location, newest first. `since` is an echo of the newest event's timestamp (or the
+     * request's own `since` if nothing new came in), the client feeds it back as the next poll's
+     * cursor.
+     */
+    public function liveFeed(Request $request): JsonResponse
+    {
+        $since = $this->resolveSince($request->input('since'));
+        $events = $this->liveEventsSince($since);
+
+        return response()->json([
+            'events' => $events,
+            'since' => $events->first()['created_at'] ?? $since->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Server-Sent Events alternative to liveFeed (transport=sse) — one held-open connection,
+     * server pushes a new `data:` frame whenever it finds events instead of the client
+     * re-requesting on a timer. Bounded to sse_max_duration seconds so a single connection
+     * doesn't tie up a PHP-FPM worker indefinitely; the browser's EventSource reconnects
+     * automatically once the server closes it.
+     */
+    public function liveStream(Request $request): StreamedResponse
+    {
+        $since = $this->resolveSince($request->input('since'));
+
+        return response()->stream(function () use ($since) {
+            $cursor = $since;
+            $deadline = now()->addSeconds((int) config('visits.live.sse_max_duration', 300));
+            $checkInterval = max(1, (int) config('visits.live.sse_check_interval', 2));
+
+            while (now()->lt($deadline)) {
+                if (connection_aborted()) {
+                    return;
+                }
+
+                $events = $this->liveEventsSince($cursor);
+
+                if ($events->isNotEmpty()) {
+                    $cursor = Carbon::parse($events->first()['created_at']);
+                    echo 'data: ' . json_encode(['events' => $events, 'since' => $cursor->toIso8601String()]) . "\n\n";
+
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
+                    flush();
+                }
+
+                sleep($checkInterval);
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            // nginx buffers proxied responses by default, which would hold every frame until
+            // the connection closes — defeating the whole point of a push. This header
+            // (nginx-specific, harmless elsewhere) tells it not to.
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    private function resolveSince(mixed $rawSince): Carbon
+    {
+        // an unparseable `since` (e.g. a client sending a malformed value) degrades to the
+        // default lookback rather than a 500 — this is called automatically every few seconds,
+        // it should never break the page.
+        if ($rawSince) {
+            try {
+                return Carbon::parse($rawSince);
+            } catch (\Exception) {
+                // fall through to the default below
+            }
+        }
+
+        return now()->subSeconds(30);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function liveEventsSince(Carbon $since): Collection
+    {
+        $eventClass = ModelResolver::event();
+
+        return $eventClass::query()
+            ->join('visit_sessions as s', 's.id', '=', 'visit_events.session_id')
+            ->whereNotNull('s.lat')
+            ->whereNotNull('s.lng')
+            ->where('visit_events.created_at', '>', $since)
+            ->orderByDesc('visit_events.created_at')
+            ->limit((int) config('visits.live.feed_limit', 50))
+            ->get(['visit_events.session_id', 'visit_events.type', 'visit_events.name', 'visit_events.created_at', 's.lat', 's.lng', 's.city', 's.country_code'])
+            ->map(fn ($row) => [
+                'session_id' => $row->session_id,
+                'lat' => (float) $row->lat,
+                'lng' => (float) $row->lng,
+                'city' => $row->city,
+                'country_code' => $row->country_code,
+                'type' => $row->type,
+                'name' => $row->name,
+                'created_at' => $row->created_at->toIso8601String(),
+            ]);
+    }
+
     public function whoami(Request $request, VisitsManager $visits): View
     {
         $requestedIp = $request->input('ip');
@@ -95,9 +208,28 @@ class DashboardController extends Controller
         $totalSessionsRaw = $botSessions + (int) $sessionClass::query()->whereBetween('started_at', [$from, $rangeEnd])->count();
         $botPercentage = $totalSessionsRaw > 0 ? round($botSessions / $totalSessionsRaw * 100, 1) : 0.0;
 
+        // point map — not aggregated through visit_stats_daily (lat/lng isn't a rollup
+        // dimension), reads raw sessions directly like the bot summary above. Capped and
+        // latest-first so a busy site doesn't try to render thousands of markers at once.
+        $mapMarkers = $sessionClass::query()
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->whereBetween('started_at', [$from, $rangeEnd])
+            ->latest('started_at')
+            ->limit((int) config('visits.dashboard.map_marker_limit', 300))
+            ->get(['lat', 'lng', 'city', 'country_code', 'started_at'])
+            ->map(fn ($session) => [
+                'lat' => (float) $session->lat,
+                'lng' => (float) $session->lng,
+                'city' => $session->city,
+                'country_code' => $session->country_code,
+                'started_at' => $session->started_at?->toDateTimeString(),
+            ])
+            ->values();
+
         return view('visits::dashboard.index', compact(
             'totals', 'trends', 'trendDates', 'breakdowns', 'breakdownMetric', 'from', 'to', 'tenantId', 'tenants',
-            'botSessions', 'botPercentage'
+            'botSessions', 'botPercentage', 'mapMarkers'
         ));
     }
 

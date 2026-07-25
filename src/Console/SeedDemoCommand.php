@@ -93,6 +93,8 @@ class SeedDemoCommand extends Command
                     'country_code' => $visitor->country_code,
                     'city' => $visitor->city,
                     'timezone' => $visitor->timezone,
+                    'lat' => $visitor->lat,
+                    'lng' => $visitor->lng,
                     'device_type' => $visitor->device_type,
                     'platform' => $visitor->platform,
                     'browser' => $visitor->browser,

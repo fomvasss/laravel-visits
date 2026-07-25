@@ -270,6 +270,50 @@ return [
         'per_page' => env('VISITS_DASHBOARD_PER_PAGE', 50),
         // Overview/Campaigns date range when no ?from=/?to= is given.
         'default_range_days' => env('VISITS_DASHBOARD_DEFAULT_RANGE_DAYS', 30),
+        // Overview's session map (Leaflet). Default tile server is OpenStreetMap's own
+        // (fine for light internal-dashboard traffic) — swap to a paid provider (Mapbox,
+        // MapTiler, ...) if this dashboard gets heavy use, per OSM's tile usage policy.
+        'map_tile_url' => env('VISITS_DASHBOARD_MAP_TILE_URL', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
+        // Max markers rendered — capped so a busy site doesn't try to plot thousands at once.
+        'map_marker_limit' => env('VISITS_DASHBOARD_MAP_MARKER_LIMIT', 300),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Live Activity Page
+    |--------------------------------------------------------------------------
+    |
+    | The /visits/live page — recent events shown as fading pulses on a map.
+    | Not true real-time either way: events go through a queue before landing
+    | in the database, so a pulse reflects "recently processed", not the
+    | instant it happened.
+    |
+    | transport:
+    |   'poll' (default) — the browser fetches /visits/live/feed every
+    |     poll_interval_ms. Works anywhere, costs one short request per
+    |     interval per open tab.
+    |   'sse' — the browser opens one long-lived connection to
+    |     /visits/live/stream (Server-Sent Events) and the server pushes
+    |     updates as they're found. Lower latency, no wasted "nothing new"
+    |     requests — but the connection holds one PHP-FPM worker per open tab
+    |     for sse_max_duration seconds (the browser's EventSource reconnects
+    |     automatically after that). Only enable this if your hosting can
+    |     afford held-open connections (e.g. a generous FPM pool, or Octane).
+    |
+    */
+
+    'live' => [
+        'enabled' => env('VISITS_LIVE_ENABLED', true),
+        'transport' => env('VISITS_LIVE_TRANSPORT', 'poll'), // poll | sse
+        // How often the browser polls the feed endpoint (transport=poll).
+        'poll_interval_ms' => env('VISITS_LIVE_POLL_INTERVAL_MS', 10000),
+        // Max events returned per poll/push.
+        'feed_limit' => env('VISITS_LIVE_FEED_LIMIT', 50),
+        // How often the server checks for new events within one SSE connection (transport=sse).
+        'sse_check_interval' => env('VISITS_LIVE_SSE_CHECK_INTERVAL', 2),
+        // How long one SSE connection stays open before the server closes it and the browser's
+        // EventSource reconnects — keeps any single PHP-FPM worker from being held forever.
+        'sse_max_duration' => env('VISITS_LIVE_SSE_MAX_DURATION', 300),
     ],
 
     /*

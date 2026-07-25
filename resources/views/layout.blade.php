@@ -22,6 +22,9 @@
     <a href="{{ route('visits.sessions') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Sessions</a>
     <a href="{{ route('visits.visitors') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Visitors</a>
     <a href="{{ route('visits.me') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Whoami</a>
+    @if(\Illuminate\Support\Facades\Route::has('visits.live'))
+        <a href="{{ route('visits.live') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Live</a>
+    @endif
     <span class="text-gray-400 dark:text-gray-500 text-xs">{{ config('app.env') }}</span>
     <div class="ml-auto">
         <button onclick="toggleTheme()"

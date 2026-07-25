@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Database\Factories;
 
+use Fomvasss\Visits\Database\Factories\Concerns\HasDemoLocations;
 use Fomvasss\Visits\Models\Session;
 use Fomvasss\Visits\Models\Visitor;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -14,6 +15,8 @@ use Illuminate\Support\Str;
  */
 class SessionFactory extends Factory
 {
+    use HasDemoLocations;
+
     protected $model = Session::class;
 
     public function definition(): array
@@ -22,6 +25,7 @@ class SessionFactory extends Factory
         $duration = fake()->numberBetween(10, 1800);
         $ended = (clone $started)->modify("+{$duration} seconds");
         $utmSource = fake()->optional(0.5)->randomElement(['google', 'facebook', 'newsletter', 'twitter', 'partner_site']);
+        $location = fake()->randomElement($this->demoLocations());
 
         return [
             // standalone default — the seed command overrides this to chain onto an
@@ -45,9 +49,11 @@ class SessionFactory extends Factory
                 fake()->randomElement(['gclid', 'fbclid', 'msclkid', 'ttclid']) => Str::random(20),
             ]),
             'ip' => fake()->ipv4(),
-            'country_code' => fake()->randomElement(['US', 'UA', 'DE', 'GB', 'PL', 'FR']),
-            'city' => fake()->city(),
-            'timezone' => 'Europe/Kyiv',
+            'country_code' => $location['country_code'],
+            'city' => $location['city'],
+            'timezone' => $location['timezone'],
+            'lat' => $this->jitterCoordinate($location['lat']),
+            'lng' => $this->jitterCoordinate($location['lng']),
             'locale' => fake()->randomElement(['uk', 'en', 'de', 'pl']),
             'browser_language' => fake()->randomElement(['uk', 'en', 'de', 'pl']),
             'device_type' => fake()->randomElement(['desktop', 'smartphone', 'tablet']),
