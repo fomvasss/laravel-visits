@@ -8,7 +8,7 @@ use Fomvasss\Visits\VisitsManager;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static void track(string $action, ?\Illuminate\Database\Eloquent\Model $eventable = null, ?array $meta = null)
+ * @method static void track(string $name, ?\Illuminate\Database\Eloquent\Model $eventable = null, ?array $meta = null)
  * @method static array whoami(?\Illuminate\Http\Request $request = null, ?string $ip = null)
  */
 class Visits extends Facade

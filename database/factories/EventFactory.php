@@ -26,7 +26,7 @@ class EventFactory extends Factory
             'session_id' => Session::factory(),
             'visitor_id' => Visitor::factory(),
             'type' => $isAction ? Event::TYPE_ACTION : Event::TYPE_PAGE_VIEW,
-            'action' => $isAction ? fake()->randomElement(['lead.created', 'order.placed', 'newsletter.subscribed', 'demo.requested']) : null,
+            'name' => $isAction ? fake()->randomElement(['lead.created', 'order.placed', 'newsletter.subscribed', 'demo.requested']) : null,
             'url' => 'https://example.test/' . fake()->randomElement(['', 'pricing', 'blog/post-1', 'features', 'contact', 'cart']),
             'is_bot' => false,
             'bot_name' => null,
@@ -45,7 +45,7 @@ class EventFactory extends Factory
             'bot_name' => fake()->randomElement(['Googlebot', 'Bingbot', 'AhrefsBot']),
             'bot_category' => 'Search bot',
             'type' => Event::TYPE_PAGE_VIEW,
-            'action' => null,
+            'name' => null,
         ]);
     }
 }

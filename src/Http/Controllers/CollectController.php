@@ -35,7 +35,7 @@ class CollectController extends Controller
 
         $validated = $request->validate([
             'type' => 'nullable|in:' . Event::TYPE_PAGE_VIEW . ',' . Event::TYPE_ACTION,
-            'action' => 'nullable|string|max:255|required_if:type,' . Event::TYPE_ACTION,
+            'name' => 'nullable|string|max:255|required_if:type,' . Event::TYPE_ACTION,
             'url' => 'nullable|string|max:2048',
             'meta' => 'nullable|array',
         ]);
@@ -52,7 +52,7 @@ class CollectController extends Controller
             request: $request,
             token: $token,
             type: $validated['type'] ?? Event::TYPE_PAGE_VIEW,
-            action: $validated['action'] ?? null,
+            name: $validated['name'] ?? null,
             meta: $validated['meta'] ?? null,
             url: $validated['url'] ?? null,
         );

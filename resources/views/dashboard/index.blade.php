@@ -6,7 +6,7 @@
     @php
         $dimensionLabels = [
             'utm_source' => 'UTM source', 'referrer_host' => 'Referrer', 'country_code' => 'Country',
-            'device_type' => 'Device', 'client_type' => 'Client type', 'action' => 'Conversion action',
+            'device_type' => 'Device', 'client_type' => 'Client type', 'name' => 'Conversion event',
         ];
     @endphp
 

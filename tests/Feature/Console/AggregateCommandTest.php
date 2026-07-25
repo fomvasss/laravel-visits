@@ -89,14 +89,14 @@ class AggregateCommandTest extends TestCase
         $visitor = Visitor::factory()->create(['first_seen_at' => now()->subDay()]);
         $session = Session::factory()->create(['visitor_id' => $visitor->id, 'started_at' => now()->subDay()]);
 
-        Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $visitor->id, 'type' => Event::TYPE_PAGE_VIEW, 'action' => null, 'created_at' => now()]);
-        Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $visitor->id, 'type' => Event::TYPE_ACTION, 'action' => 'order.placed', 'created_at' => now()]);
+        Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $visitor->id, 'type' => Event::TYPE_PAGE_VIEW, 'name' => null, 'created_at' => now()]);
+        Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $visitor->id, 'type' => Event::TYPE_ACTION, 'name' => 'order.placed', 'created_at' => now()]);
 
         $this->artisan('visits:aggregate', ['--date' => 'today'])->assertExitCode(0);
 
         $this->assertSame(1, $this->stat(StatDaily::METRIC_PAGE_VIEWS, '', ''));
         $this->assertSame(1, $this->stat(StatDaily::METRIC_CONVERSIONS, '', ''));
-        $this->assertSame(1, $this->stat(StatDaily::METRIC_CONVERSIONS, 'action', 'order.placed'));
+        $this->assertSame(1, $this->stat(StatDaily::METRIC_CONVERSIONS, 'name', 'order.placed'));
     }
 
     public function test_rerunning_replaces_rather_than_duplicates(): void

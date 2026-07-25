@@ -79,7 +79,7 @@
                 <tr>
                     <th class="text-left px-3 py-2">Time</th>
                     <th class="text-left px-3 py-2">Type</th>
-                    <th class="text-left px-3 py-2">Action</th>
+                    <th class="text-left px-3 py-2">Name</th>
                     <th class="text-left px-3 py-2">URL</th>
                     <th class="text-left px-3 py-2">Eventable</th>
                     <th class="text-left px-3 py-2">Meta</th>
@@ -90,7 +90,7 @@
                     <tr class="border-t border-gray-100 dark:border-gray-800 {{ $event->is_bot ? 'opacity-50' : '' }}">
                         <td class="px-3 py-2">{{ $event->created_at?->format('H:i:s') }}</td>
                         <td class="px-3 py-2">{{ $event->type }}{{ $event->is_bot ? ' (' . ($event->bot_name ?? 'bot') . ')' : '' }}</td>
-                        <td class="px-3 py-2">{{ $event->action }}</td>
+                        <td class="px-3 py-2">{{ $event->name }}</td>
                         <td class="px-3 py-2 truncate max-w-xs" title="{{ $event->url }}">{{ $event->url }}</td>
                         <td class="px-3 py-2">{{ $event->eventable_type ? class_basename($event->eventable_type) . ' #' . $event->eventable_id : '' }}</td>
                         <td class="px-3 py-2 truncate max-w-xs" title="{{ $event->meta ? json_encode($event->meta) : '' }}">{{ $event->meta ? json_encode($event->meta) : '' }}</td>

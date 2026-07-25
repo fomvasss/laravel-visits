@@ -149,7 +149,7 @@ class DashboardControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertViewHas('breakdownMetric', StatDaily::METRIC_CONVERSIONS);
-        $response->assertViewHas('breakdowns', fn ($breakdowns) => array_key_exists('action', $breakdowns));
+        $response->assertViewHas('breakdowns', fn ($breakdowns) => array_key_exists('name', $breakdowns));
     }
 
     public function test_sessions_list_excludes_bots_by_default_and_includes_with_with_bots_flag(): void

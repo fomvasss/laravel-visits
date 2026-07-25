@@ -25,7 +25,7 @@ class PayloadBuilder
         Request $request,
         string $token,
         string $type,
-        ?string $action = null,
+        ?string $name = null,
         ?Model $eventable = null,
         ?array $meta = null,
         ?string $url = null,
@@ -36,7 +36,7 @@ class PayloadBuilder
         return new VisitPayload(
             token: $token,
             type: $type,
-            action: $action,
+            name: $name,
             // explicit $url wins — the /visits/collect endpoint's own URL is never the page the
             // JS beacon is reporting (SPA route change), the client sends the real one instead.
             url: $url ?? $request->fullUrl(),

@@ -31,7 +31,7 @@ class VisitsManager
     ) {
     }
 
-    public function track(string $action, ?Model $eventable = null, ?array $meta = null): void
+    public function track(string $name, ?Model $eventable = null, ?array $meta = null): void
     {
         if (! config('visits.enabled', true)) {
             return;
@@ -52,7 +52,7 @@ class VisitsManager
             request: $this->request,
             token: $token,
             type: Event::TYPE_ACTION,
-            action: $action,
+            name: $name,
             eventable: $eventable,
             meta: $meta,
         );

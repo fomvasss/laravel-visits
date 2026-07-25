@@ -18,13 +18,13 @@ class HasVisitsTest extends TestCase
 
         Event::factory()->create([
             'type' => Event::TYPE_ACTION,
-            'action' => 'order.placed',
+            'name' => 'order.placed',
             'eventable_type' => TestOrder::class,
             'eventable_id' => $order->id,
         ]);
         Event::factory()->create([
             'type' => Event::TYPE_ACTION,
-            'action' => 'order.paid',
+            'name' => 'order.paid',
             'eventable_type' => TestOrder::class,
             'eventable_id' => $order->id,
         ]);
@@ -40,33 +40,33 @@ class HasVisitsTest extends TestCase
         Event::factory()->create([
             'eventable_type' => TestOrder::class,
             'eventable_id' => $order->id,
-            'action' => 'order.placed',
+            'name' => 'order.placed',
             'created_at' => now()->subDay(),
         ]);
         $latest = Event::factory()->create([
             'eventable_type' => TestOrder::class,
             'eventable_id' => $order->id,
-            'action' => 'order.paid',
+            'name' => 'order.paid',
             'created_at' => now(),
         ]);
 
         $this->assertSame($latest->id, $order->latestVisitEvent()->first()->id);
     }
 
-    public function test_latest_visit_event_filters_by_action(): void
+    public function test_latest_visit_event_filters_by_name(): void
     {
         $order = TestOrder::create(['title' => 'Order #1']);
 
         $placed = Event::factory()->create([
             'eventable_type' => TestOrder::class,
             'eventable_id' => $order->id,
-            'action' => 'order.placed',
+            'name' => 'order.placed',
             'created_at' => now()->subDay(),
         ]);
         Event::factory()->create([
             'eventable_type' => TestOrder::class,
             'eventable_id' => $order->id,
-            'action' => 'order.paid',
+            'name' => 'order.paid',
             'created_at' => now(),
         ]);
 

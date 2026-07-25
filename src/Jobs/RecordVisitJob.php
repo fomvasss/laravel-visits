@@ -249,7 +249,7 @@ class RecordVisitJob implements ShouldQueue
             'session_id' => $session->id,
             'visitor_id' => $visitor->id,
             'type' => $this->payload->type,
-            'action' => $this->payload->action,
+            'name' => $this->payload->name,
             'url' => $this->payload->url,
             'is_bot' => $device['is_bot'],
             'bot_name' => $device['bot_name'],

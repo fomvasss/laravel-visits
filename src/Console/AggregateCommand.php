@@ -145,7 +145,7 @@ class AggregateCommand extends Command
             ->where('v.tenant_id', $tenantId)
             ->whereBetween('e.created_at', [$start, $end]);
 
-        $eventColumnMap = $sessionColumnMap + ['action' => 'e.action'];
+        $eventColumnMap = $sessionColumnMap + ['name' => 'e.name'];
 
         $pageViewsQuery = (clone $eventsBase)->where('e.type', Event::TYPE_PAGE_VIEW);
         $rows = array_merge($rows, $this->rowsFor(StatDaily::METRIC_PAGE_VIEWS, $pageViewsQuery, $eventColumnMap, $date, $tenantId));

@@ -80,12 +80,12 @@ class PayloadBuilderTest extends TestCase
             $request,
             'tok123',
             Event::TYPE_ACTION,
-            action: 'order.placed',
+            name: 'order.placed',
             eventable: $order,
             meta: ['amount' => 99.5],
         );
 
-        $this->assertSame('order.placed', $payload->action);
+        $this->assertSame('order.placed', $payload->name);
         $this->assertSame(TestOrder::class, $payload->eventableType);
         $this->assertSame(7, $payload->eventableId);
         $this->assertSame(['amount' => 99.5], $payload->meta);

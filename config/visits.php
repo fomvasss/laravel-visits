@@ -231,7 +231,7 @@ return [
     'aggregate' => [
         'dimensions' => [
             'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'referrer_host',
-            'country_code', 'device_type', 'browser', 'client_type', 'action',
+            'country_code', 'device_type', 'browser', 'client_type', 'name',
         ],
     ],
 

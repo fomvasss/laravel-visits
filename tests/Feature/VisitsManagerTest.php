@@ -32,7 +32,7 @@ class VisitsManagerTest extends TestCase
 
         Queue::assertPushed(RecordVisitJob::class, function ($job) use ($order) {
             return $job->payload->type === Event::TYPE_ACTION
-                && $job->payload->action === 'order.placed'
+                && $job->payload->name === 'order.placed'
                 && $job->payload->eventableType === TestOrder::class
                 && $job->payload->eventableId === $order->id
                 && $job->payload->meta === ['amount' => 42.5];
@@ -68,7 +68,7 @@ class VisitsManagerTest extends TestCase
 
         Visits::track('newsletter.subscribed');
 
-        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->action === 'newsletter.subscribed'
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->name === 'newsletter.subscribed'
             && $job->payload->eventableType === null);
     }
 

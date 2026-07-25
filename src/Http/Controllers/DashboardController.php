@@ -69,7 +69,8 @@ class DashboardController extends Controller
 
         // toggle between "sessions" (traffic volume by source) and "conversions" (which
         // source actually converts) — same 5 dimension panels, different underlying metric.
-        // "action" only makes sense once metric=conversions (a session has no single action).
+        // "name" (the conversion event's name) only makes sense once metric=conversions (a
+        // session has no single event name of its own).
         $breakdownMetric = $request->input('breakdown_metric') === StatDaily::METRIC_CONVERSIONS
             ? StatDaily::METRIC_CONVERSIONS
             : StatDaily::METRIC_SESSIONS;
@@ -77,7 +78,7 @@ class DashboardController extends Controller
         $breakdownDimensions = ['utm_source', 'referrer_host', 'country_code', 'device_type', 'client_type'];
 
         if ($breakdownMetric === StatDaily::METRIC_CONVERSIONS) {
-            $breakdownDimensions[] = 'action';
+            $breakdownDimensions[] = 'name';
         }
 
         $breakdowns = $this->computeBreakdowns($rows, $breakdownMetric, $breakdownDimensions);

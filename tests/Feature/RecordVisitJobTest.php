@@ -28,7 +28,7 @@ class RecordVisitJobTest extends TestCase
         $defaults = [
             'token' => 'tok_' . str_repeat('a', 36),
             'type' => Event::TYPE_PAGE_VIEW,
-            'action' => null,
+            'name' => null,
             'url' => 'https://example.test/pricing',
             'ip' => '203.0.113.10',
             'userAgent' => self::DESKTOP_UA,
@@ -268,7 +268,7 @@ class RecordVisitJobTest extends TestCase
 
         RecordVisitJob::dispatchSync($this->payload([
             'type' => Event::TYPE_ACTION,
-            'action' => 'order.placed',
+            'name' => 'order.placed',
             'eventableType' => 'App\\Models\\Order',
             'eventableId' => 1,
         ]));
@@ -285,7 +285,7 @@ class RecordVisitJobTest extends TestCase
         RecordVisitJob::dispatchSync($this->payload([
             'token' => $token,
             'type' => Event::TYPE_ACTION,
-            'action' => 'newsletter.subscribed',
+            'name' => 'newsletter.subscribed',
         ]));
 
         $this->assertSame(1, Session::first()->page_views_count);

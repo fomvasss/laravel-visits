@@ -12,18 +12,25 @@ return new class extends Migration {
     {
         Schema::create('visit_stats_daily', function (Blueprint $t) {
             $t->id();
+
+            // types
+            $t->string('metric', 40); // sessions | visitors | page_views | conversions
+            // dimension/dimension_value default to '' (not NULL) for the same reason as tenant_id below —
+            // '' represents the "total, no breakdown" row.
+            $t->string('dimension', 40)->default(''); // utm_source | referrer_host | country_code | ... | '' (total)
+
+            // content
             $t->date('date')->index();
+            $t->string('dimension_value')->default('');
+            $t->unsignedBigInteger('count')->default(0);
+
+            // relation fields
             // stored as empty string (not NULL) when there is no tenant — keeps the unique index reliable.
             // NULL never equals NULL in a unique index on MySQL or PostgreSQL, which would let
             // duplicate "no tenant" rows slip through.
             $t->string('tenant_id')->default('');
-            $t->string('metric', 40); // sessions | visitors | page_views | conversions
-            // dimension/dimension_value default to '' (not NULL) for the same reason as tenant_id above —
-            // '' represents the "total, no breakdown" row.
-            $t->string('dimension', 40)->default(''); // utm_source | referrer_host | country_code | ... | '' (total)
-            $t->string('dimension_value')->default('');
-            $t->unsignedBigInteger('count')->default(0);
 
+            // indexes
             $t->unique(['date', 'tenant_id', 'metric', 'dimension', 'dimension_value'], 'visit_stats_daily_unique');
         });
     }

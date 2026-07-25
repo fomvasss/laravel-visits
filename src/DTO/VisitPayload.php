@@ -13,7 +13,7 @@ readonly class VisitPayload
     public function __construct(
         public string $token,
         public string $type,
-        public ?string $action,
+        public ?string $name,
         public ?string $url,
         public ?string $ip,
         public string $userAgent,

@@ -27,14 +27,14 @@ class CollectControllerTest extends TestCase
             && $job->payload->url === 'https://spa.example.test/dashboard');
     }
 
-    public function test_action_requires_an_action_name(): void
+    public function test_action_requires_a_name(): void
     {
         Queue::fake();
 
         $response = $this->postJson('/visits/collect', ['type' => Event::TYPE_ACTION]);
 
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['action']);
+        $response->assertJsonValidationErrors(['name']);
         Queue::assertNotPushed(RecordVisitJob::class);
     }
 
@@ -44,13 +44,13 @@ class CollectControllerTest extends TestCase
 
         $response = $this->postJson('/visits/collect', [
             'type' => Event::TYPE_ACTION,
-            'action' => 'newsletter.subscribed',
+            'name' => 'newsletter.subscribed',
             'meta' => ['source' => 'footer'],
         ]);
 
         $response->assertOk();
         Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->type === Event::TYPE_ACTION
-            && $job->payload->action === 'newsletter.subscribed'
+            && $job->payload->name === 'newsletter.subscribed'
             && $job->payload->meta === ['source' => 'footer']);
     }
 

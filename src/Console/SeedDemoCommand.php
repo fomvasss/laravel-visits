@@ -83,6 +83,11 @@ class SeedDemoCommand extends Command
                     // same idea as last-touch-inherits-from-visitor in the real pipeline
                     'utm_source' => $visitor->utm_source,
                     'utm_medium' => $visitor->utm_medium,
+                    'utm_campaign' => $visitor->utm_campaign,
+                    'utm_term' => $visitor->utm_term,
+                    'utm_content' => $visitor->utm_content,
+                    'ref' => $visitor->ref,
+                    'extra_params' => $visitor->extra_params,
                     'referrer_host' => $visitor->first_referrer_host,
                     'referrer_url' => $visitor->first_referrer_url,
                     'country_code' => $visitor->country_code,

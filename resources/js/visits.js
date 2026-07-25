@@ -82,8 +82,8 @@
         return send({ type: 'page_view', url: url || window.location.href });
     }
 
-    function track(action, meta) {
-        return send({ type: 'action', action: action, url: window.location.href, meta: meta || null });
+    function track(name, meta) {
+        return send({ type: 'action', name: name, url: window.location.href, meta: meta || null });
     }
 
     window.Visits = { track: track, trackPageView: trackPageView };

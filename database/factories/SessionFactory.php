@@ -7,6 +7,7 @@ namespace Fomvasss\Visits\Database\Factories;
 use Fomvasss\Visits\Models\Session;
 use Fomvasss\Visits\Models\Visitor;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Session>
@@ -36,6 +37,13 @@ class SessionFactory extends Factory
             'referrer_host' => $utmSource ? "{$utmSource}.com" : null,
             'utm_source' => $utmSource,
             'utm_medium' => $utmSource ? fake()->randomElement(['cpc', 'social', 'email', 'referral']) : null,
+            'utm_campaign' => $utmSource ? fake()->optional(0.5)->randomElement(['spring_sale', 'launch_2026', 'retargeting']) : null,
+            'utm_term' => $utmSource ? fake()->optional(0.3)->randomElement(['running shoes', 'laptop bag', 'wireless mouse']) : null,
+            'utm_content' => $utmSource ? fake()->optional(0.3)->randomElement(['banner_a', 'banner_b', 'text_link', 'carousel_1']) : null,
+            'ref' => fake()->optional(0.1)->numerify('partner_###'),
+            'extra_params' => fake()->optional(0.2)->passthrough([
+                fake()->randomElement(['gclid', 'fbclid', 'msclkid', 'ttclid']) => Str::random(20),
+            ]),
             'ip' => fake()->ipv4(),
             'country_code' => fake()->randomElement(['US', 'UA', 'DE', 'GB', 'PL', 'FR']),
             'city' => fake()->city(),
