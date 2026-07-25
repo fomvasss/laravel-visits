@@ -6,9 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-26
+
 ### Added
-- Full `README.md` + `docs/client-integration.md` — installation, features, API-only/decoupled SPA/mobile/cross-origin/mixed web+API integration guides, security considerations
+- Full `README.md` + `README.uk.md` + `docs/client-integration.md` — installation, features, API-only/decoupled SPA/mobile/cross-origin/mixed web+API integration guides, security considerations
 - `LICENSE.md` (MIT)
+- `CHANGELOG.md`
 - Dashboard screenshots + animated GIF (`art/`)
 - `VisitorCreated`, `SessionStarted`, `VisitorIdentified` events
 - Session-locations map on the Overview dashboard page (Leaflet, marker clustering with dynamic size/color thresholds, fullscreen toggle)
