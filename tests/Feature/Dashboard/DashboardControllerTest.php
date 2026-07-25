@@ -127,6 +127,75 @@ class DashboardControllerTest extends TestCase
             && $markers->first()['lat'] === 50.4501);
     }
 
+    public function test_index_online_now_counts_open_recently_active_sessions(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        Session::factory()->create(['ended_at' => null, 'last_activity_at' => now()->subMinutes(2)]);
+        Session::factory()->create(['ended_at' => now(), 'last_activity_at' => now()->subMinutes(1)]);
+        Session::factory()->create(['ended_at' => null, 'last_activity_at' => now()->subMinutes(20)]);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('onlineNow', 1);
+    }
+
+    public function test_index_online_now_respects_configured_window(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+        config(['visits.dashboard.online_window_minutes' => 30]);
+
+        Session::factory()->create(['ended_at' => null, 'last_activity_at' => now()->subMinutes(20)]);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('onlineNow', 1);
+    }
+
+    public function test_index_top_pages_ranks_page_views_by_url(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+        $session = Session::factory()->create(['started_at' => now()]);
+
+        Event::factory()->count(3)->create([
+            'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
+            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/popular', 'created_at' => now(),
+        ]);
+        Event::factory()->create([
+            'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
+            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/rare', 'created_at' => now(),
+        ]);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('topPages', fn ($pages) => $pages->count() === 2
+            && $pages->first()['url'] === 'https://example.test/popular'
+            && $pages->first()['count'] === 3);
+    }
+
+    public function test_index_top_pages_excludes_actions_and_bots(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+        $session = Session::factory()->create(['started_at' => now()]);
+
+        Event::factory()->create([
+            'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
+            'type' => Event::TYPE_ACTION, 'name' => 'newsletter.subscribed', 'url' => 'https://example.test/checkout', 'created_at' => now(),
+        ]);
+        Event::factory()->bot()->create([
+            'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
+            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/bot-hit', 'created_at' => now(),
+        ]);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('topPages', fn ($pages) => $pages->isEmpty());
+    }
+
     public function test_index_map_excludes_bots(): void
     {
         Carbon::setTestNow('2026-03-10 12:00:00');

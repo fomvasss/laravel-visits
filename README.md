@@ -92,6 +92,8 @@ Which mechanism to use depends on what kind of app is on the other end:
 
 Any `GET` request through the `web` middleware group is tracked automatically, except paths matching `visits.exclude_paths` (admin/debugbar/horizon/health-check paths are excluded by default) — and the package's own dashboard/whoami paths, which are always excluded regardless of `exclude_paths` (otherwise browsing `/visits` would itself generate page-view rows about viewing the dashboard).
 
+`visits.exclude_ips` (literal IPs and/or CIDR ranges — an internal/office network, for example) is checked centrally in `RecordVisitJob` instead, so it applies to every entry point uniformly — the automatic middleware, `POST /visits/collect`, and server-side `Visits::track()` calls alike.
+
 ### Custom actions (server-side)
 
 ```php
@@ -173,11 +175,39 @@ Query parameters are split three ways (`config('visits.tracking_params')`):
 - **extra_keys** — always captured into the `extra_params` JSON bucket: ad-platform click IDs (`gclid`, `fbclid`, `msclkid`, `ttclid`, `yclid`, `twclid`, `li_fat_id` by default) — high-cardinality, not worth a dedicated column each, but worth keeping so you can send the ID back to that platform's own conversion API.
 - **extra_pattern** — an optional regex; any other query param whose *name* matches it is also captured into `extra_params`. `null` by default. Example: `'/^aff_/'` captures every `aff_*` param from an affiliate network of your own.
 
+Separately, `config('visits.search_engines')` extracts the organic search keyword from a known search engine's *referrer* URL (not the current request's own query string, which is why it's not part of `tracking_params` above) into `Visitor.search_term`/`Session.search_term` — same first-touch/last-touch split as UTM. Most search engines stop sending a real referrer over HTTPS-to-HTTPS navigation ("keyword not provided"); this only catches the cases where one still arrives.
+
 ## Geo & Device Detection
 
 Geo lookups go through `stevebauman/location` (configure its driver in your own `config/location.php`); results are cached per IP for `visits.geo.cache_ttl` seconds. Set `visits.geo.store_coordinates` to `false` to skip storing `lat`/`lng` for privacy-conscious deployments.
 
 Device/browser/platform detection and bot classification go through `matomo/device-detector`, which compiles its rule set on first use and caches it under `visits.device_detection.cache_dir`. Bot traffic never pays for a geo lookup (checked first), and dashboard queries exclude bots by default (see `ExcludesBotsByDefault` — use `withBots()`/`onlyBots()` to opt back in on any query).
+
+### Using the MaxMind driver
+
+`stevebauman/location`'s default drivers call an external HTTP API per lookup. For a self-hosted, no-outbound-request alternative, switch to its local MaxMind (GeoLite2) driver:
+
+1. Get a free license key from [MaxMind](https://www.maxmind.com/en/geolite2/signup) and add it to your `.env`:
+   ```
+   MAXMIND_LICENSE_KEY=your-key-here
+   ```
+2. In `config/location.php` (published by `stevebauman/location` itself, not this package — `php artisan vendor:publish --provider="Stevebauman\Location\LocationServiceProvider"`), set the driver to MaxMind and keep the HTTP driver as a fallback:
+   ```php
+   'driver' => \Stevebauman\Location\Drivers\MaxMind::class,
+   'fallbacks' => [
+       \Stevebauman\Location\Drivers\IpApi::class,
+   ],
+   ```
+3. Download the `.mmdb` database:
+   ```bash
+   php artisan location:update
+   ```
+4. Add the downloaded database directory (`database/maxmind` by default) to your app's `.gitignore` — it's a binary blob you re-download, not something to commit.
+5. GeoLite2 databases are updated by MaxMind roughly weekly. Schedule `location:update` periodically (e.g. weekly) to keep lookups current:
+   ```php
+   // routes/console.php
+   Schedule::command('location:update')->weekly();
+   ```
 
 ## Consent (GDPR)
 
@@ -267,12 +297,21 @@ Optionally pass `?ip=1.2.3.4` to look up geo for a different IP (device/locale/t
 
 A built-in web UI, enabled by default at `/visits` (`visits.dashboard.*` config for path/middleware/pagination). **No auth is applied by default** — add your own (`auth`, `can:...`) via `visits.dashboard.middleware` before deploying anywhere but local.
 
-- **Overview** (`/visits`) — totals + trend sparklines for visitors/sessions/page views/conversions over a date range, breakdown panels (UTM source, referrer host, country, device, client type — or by conversion name), a bot-traffic summary, and a session-locations map (Leaflet, marker clustering, fullscreen toggle).
+- **Overview** (`/visits`) — an "online now" indicator, totals + trend sparklines for visitors/sessions/page views/conversions over a date range, breakdown panels (UTM source, referrer host, country, device, client type — or by conversion name), a top-pages panel, a bot-traffic summary, and a session-locations map (Leaflet, marker clustering, fullscreen toggle).
 - **Campaigns** (`/visits/campaigns`) — the same date-range/breakdown mechanism, but every UTM/`ref` dimension at once, for drilling into campaign attribution specifically.
 - **Sessions** (`/visits/sessions`) — sortable, filterable (date range, country, device, UTM source, IP) paginated list; links through to per-session detail (`/visits/sessions/{id}`) with its full event timeline.
 - **Visitors** (`/visits/visitors`) — same idea, one row per `Visitor`, with a "returning only" filter and session count; links through to per-visitor detail (`/visits/visitors/{id}`).
 - **Live** (`/visits/live`) — recent events as fading pulse markers on a world map, plus a scrolling log table underneath (linking back to each session's detail page). Not true real time — events go through a queue before landing here, so a pulse reflects "recently processed", not the instant it happened. See [Live Activity Page](#live-activity-page) below for the polling vs. SSE choice.
 - **Whoami** (`/visits/me`) — the dashboard's own view of the [Whoami](#whoami-endpoint) data, with a form to look up a different IP.
+
+### "Breakdown by: Sessions vs Conversions"
+
+The toggle on Overview/Campaigns (`?breakdown_metric=`) switches what the breakdown panels count, not just how they're grouped:
+
+- **Sessions** counts visits — traffic volume per source (UTM, referrer, country, ...).
+- **Conversions** counts the conversion *events* themselves (`Visits::track()` / `Event::TYPE_ACTION`, not `page_view`) — a session with 2 conversions counts as 2, not "1 session that had events".
+
+These are different units, so totals differ between the two modes — that's expected, not a bug. Switching to Conversions on Overview also adds a "Conversion event" panel, breaking down by the action's own `name`.
 
 ### Live Activity Page
 
@@ -356,7 +395,9 @@ The full annotated config file is at [`config/visits.php`](config/visits.php) �
 | `reset_identity_on_logout` | Clear `Visitor.user_id` on logout (shared/kiosk devices). |
 | `session_timeout_minutes` | Inactivity window before `visits:close-stale-sessions` closes a session. |
 | `exclude_paths` | Paths the tracking middleware never tracks. |
+| `exclude_ips` | Literal IPs and/or CIDR ranges never tracked, regardless of entry point. |
 | `tracking_params` | UTM/`ref` core columns, ad-click-ID `extra_keys`, optional `extra_pattern` regex. |
+| `search_engines` | Host → query-param map for organic search keyword extraction from referrers (`Visitor`/`Session.search_term`). |
 | `geo` | Geo lookup cache TTL, whether to store coordinates. |
 | `device_detection` | `matomo/device-detector` rule-cache directory. |
 | `rate_limit` | Throttles for `/visits/collect` (`endpoint`), per-visitor event budget (`visitor_budget`), and `/visits/whoami` (`whoami`). |
@@ -365,7 +406,7 @@ The full annotated config file is at [`config/visits.php`](config/visits.php) �
 | `retention_days` | Age at which raw rows become eligible for `visits:prune`. |
 | `aggregate.dimensions` | Which dimensions `visits:aggregate` breaks rollups down by. |
 | `consent` | Gate tracking behind a `ConsentResolverInterface` implementation. |
-| `dashboard` | Path/middleware/pagination, default date range, map tile URL/marker limit. |
+| `dashboard` | Path/middleware/pagination, default date range, map tile URL/marker limit, top-pages limit, online-now window. |
 | `live` | Live page on/off, `poll`/`sse` transport, intervals, feed limit. |
 | `whoami` | Path/middleware for the public whoami endpoint. |
 | `tenant_resolver` | Reserved for host use — the package itself never reads or scopes by it. |

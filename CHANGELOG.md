@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-26
+
+### Added
+- Overview dashboard: "Top pages" panel (most-visited URLs in the selected range) and an "online now" indicator (open sessions active within `dashboard.online_window_minutes`, default 5)
+- `Visitor.search_term`/`Session.search_term` — organic search keyword extracted from a known search engine's referrer URL (`config('visits.search_engines')`); first-touch on Visitor, last-touch on Session, same pattern as UTM
+- `visits.exclude_ips` — literal IPs and/or CIDR ranges (IPv4/IPv6) never tracked regardless of entry point, checked centrally in `RecordVisitJob`
+- `Event.route_name` — the matched Laravel route name for automatic page views and server-triggered `Visits::track()` calls, alongside the existing raw `url` column (`null` for `POST /visits/collect`, whose own route is never the page being reported)
+- `visits.dashboard.top_pages_limit` config key
+- README/README.uk: how to switch `stevebauman/location` to the local MaxMind (GeoLite2) driver, and what the "Breakdown by: Sessions vs Conversions" toggle actually counts
+
 ## [0.2.0] - 2026-07-26
 
 ### Added

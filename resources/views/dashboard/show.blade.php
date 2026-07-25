@@ -39,6 +39,9 @@
             <dl class="text-xs space-y-1.5 mb-4">
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Landing URL</dt><dd class="truncate max-w-[60%]" title="{{ $session->landing_url }}">{{ $session->landing_url }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Referrer</dt><dd>{{ $session->referrer_host ?? '—' }}</dd></div>
+                @if($session->search_term)
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Search term</dt><dd>{{ $session->search_term }}</dd></div>
+                @endif
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM source/medium</dt><dd>{{ $session->utm_source }} / {{ $session->utm_medium }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM campaign</dt><dd>{{ $session->utm_campaign }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">ref</dt><dd>{{ $session->ref }}</dd></div>
@@ -52,6 +55,9 @@
                 <dl class="text-xs space-y-1.5">
                     <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Landing URL</dt><dd class="truncate max-w-[60%]" title="{{ $session->visitor->first_landing_url }}">{{ $session->visitor->first_landing_url }}</dd></div>
                     <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Referrer</dt><dd>{{ $session->visitor->first_referrer_host ?? '—' }}</dd></div>
+                    @if($session->visitor->search_term)
+                        <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Search term</dt><dd>{{ $session->visitor->search_term }}</dd></div>
+                    @endif
                     <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM source/medium</dt><dd>{{ $session->visitor->utm_source }} / {{ $session->visitor->utm_medium }}</dd></div>
                     <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM campaign</dt><dd>{{ $session->visitor->utm_campaign }}</dd></div>
                     <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">ref</dt><dd>{{ $session->visitor->ref }}</dd></div>
@@ -81,6 +87,7 @@
                     <th class="text-left px-3 py-2">Type</th>
                     <th class="text-left px-3 py-2">Name</th>
                     <th class="text-left px-3 py-2">URL</th>
+                    <th class="text-left px-3 py-2">Route</th>
                     <th class="text-left px-3 py-2">Eventable</th>
                     <th class="text-left px-3 py-2">Meta</th>
                 </tr>
@@ -92,6 +99,7 @@
                         <td class="px-3 py-2">{{ $event->type }}{{ $event->is_bot ? ' (' . ($event->bot_name ?? 'bot') . ')' : '' }}</td>
                         <td class="px-3 py-2">{{ $event->name }}</td>
                         <td class="px-3 py-2 truncate max-w-xs" title="{{ $event->url }}">{{ $event->url }}</td>
+                        <td class="px-3 py-2 font-mono">{{ $event->route_name }}</td>
                         <td class="px-3 py-2">{{ $event->eventable_type ? class_basename($event->eventable_type) . ' #' . $event->eventable_id : '' }}</td>
                         <td class="px-3 py-2 truncate max-w-xs" title="{{ $event->meta ? json_encode($event->meta) : '' }}">{{ $event->meta ? json_encode($event->meta) : '' }}</td>
                     </tr>

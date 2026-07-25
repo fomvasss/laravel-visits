@@ -26,7 +26,7 @@ class TrackVisitMiddlewareTest extends TestCase
     {
         parent::setUp();
 
-        Route::get('/test-page', fn () => 'ok')->middleware(['web', 'track-visits']);
+        Route::get('/test-page', fn () => 'ok')->middleware(['web', 'track-visits'])->name('test-page');
         Route::post('/test-post', fn () => 'ok')->middleware(['web', 'track-visits']);
     }
 
@@ -39,6 +39,15 @@ class TrackVisitMiddlewareTest extends TestCase
         $response->assertOk();
         $response->assertCookie((string) config('visits.cookie.name'));
         Queue::assertPushed(RecordVisitJob::class);
+    }
+
+    public function test_captures_the_matched_route_name(): void
+    {
+        Queue::fake();
+
+        $this->get('/test-page')->assertOk();
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->routeName === 'test-page');
     }
 
     public function test_non_get_requests_are_not_tracked(): void

@@ -30,9 +30,11 @@ class RecordVisitJobTest extends TestCase
             'type' => Event::TYPE_PAGE_VIEW,
             'name' => null,
             'url' => 'https://example.test/pricing',
+            'routeName' => null,
             'ip' => '203.0.113.10',
             'userAgent' => self::DESKTOP_UA,
             'referrer' => null,
+            'searchTerm' => null,
             'utm' => [],
             'extraParams' => [],
             'locale' => 'en',
@@ -87,6 +89,38 @@ class RecordVisitJobTest extends TestCase
         $this->assertSame(Event::TYPE_PAGE_VIEW, $event->type);
         $this->assertSame($session->id, $event->session_id);
         $this->assertSame($visitor->id, $event->visitor_id);
+    }
+
+    public function test_excluded_ip_records_nothing(): void
+    {
+        $this->fakeGeo();
+        config(['visits.exclude_ips' => ['203.0.113.10']]);
+
+        RecordVisitJob::dispatchSync($this->payload(['ip' => '203.0.113.10']));
+
+        $this->assertSame(0, Visitor::count());
+        $this->assertSame(0, Session::count());
+        $this->assertSame(0, Event::count());
+    }
+
+    public function test_excluded_ip_range_records_nothing(): void
+    {
+        $this->fakeGeo();
+        config(['visits.exclude_ips' => ['203.0.113.0/24']]);
+
+        RecordVisitJob::dispatchSync($this->payload(['ip' => '203.0.113.99']));
+
+        $this->assertSame(0, Visitor::count());
+    }
+
+    public function test_non_excluded_ip_still_records(): void
+    {
+        $this->fakeGeo();
+        config(['visits.exclude_ips' => ['203.0.113.10']]);
+
+        RecordVisitJob::dispatchSync($this->payload(['ip' => '198.51.100.5']));
+
+        $this->assertSame(1, Visitor::count());
     }
 
     public function test_second_visit_within_timeout_reuses_the_same_session(): void
@@ -152,6 +186,56 @@ class RecordVisitJobTest extends TestCase
         $sessions = Session::orderBy('started_at')->get();
         $this->assertSame('google', $sessions[0]->utm_source);
         $this->assertSame('newsletter', $sessions[1]->utm_source, 'a new session takes last-touch from the request');
+    }
+
+    public function test_search_term_is_first_touch_on_visitor_but_last_touch_on_session(): void
+    {
+        $this->fakeGeo();
+        $token = 'tok_' . str_repeat('s', 36);
+        config(['visits.session_timeout_minutes' => 30]);
+
+        Carbon::setTestNow('2026-01-01 12:00:00');
+        RecordVisitJob::dispatchSync($this->payload([
+            'token' => $token,
+            'searchTerm' => 'laravel tracking',
+        ]));
+
+        // new session (past timeout), different keyword this time
+        Carbon::setTestNow('2026-01-02 12:00:00');
+        RecordVisitJob::dispatchSync($this->payload([
+            'token' => $token,
+            'searchTerm' => 'laravel visits package',
+        ]));
+
+        Carbon::setTestNow();
+
+        $visitor = Visitor::first();
+        $this->assertSame('laravel tracking', $visitor->search_term, 'first-touch must never be overwritten');
+
+        $sessions = Session::orderBy('started_at')->get();
+        $this->assertSame('laravel tracking', $sessions[0]->search_term);
+        $this->assertSame('laravel visits package', $sessions[1]->search_term, 'a new session takes last-touch from the request');
+    }
+
+    public function test_session_without_search_term_inherits_visitors_first_touch(): void
+    {
+        $this->fakeGeo();
+        $token = 'tok_' . str_repeat('t', 36);
+
+        Carbon::setTestNow('2026-01-01 12:00:00');
+        RecordVisitJob::dispatchSync($this->payload([
+            'token' => $token,
+            'searchTerm' => 'laravel tracking',
+        ]));
+
+        // new session, no search term on the request this time
+        Carbon::setTestNow('2026-01-02 12:00:00');
+        RecordVisitJob::dispatchSync($this->payload(['token' => $token, 'searchTerm' => null]));
+
+        Carbon::setTestNow();
+
+        $sessions = Session::orderBy('started_at')->get();
+        $this->assertSame('laravel tracking', $sessions[1]->search_term, 'no search term on the request => inherit from visitor');
     }
 
     public function test_session_without_new_utm_inherits_visitors_first_touch(): void

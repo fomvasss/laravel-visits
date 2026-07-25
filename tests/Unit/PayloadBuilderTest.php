@@ -7,17 +7,19 @@ namespace Fomvasss\Visits\Tests\Unit;
 use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Support\LocaleResolver;
 use Fomvasss\Visits\Support\PayloadBuilder;
+use Fomvasss\Visits\Support\SearchTermExtractor;
 use Fomvasss\Visits\Support\TrackingParamsExtractor;
 use Fomvasss\Visits\Tests\Fixtures\TestOrder;
 use Fomvasss\Visits\Tests\Fixtures\TestUser;
 use Fomvasss\Visits\Tests\TestCase;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 
 class PayloadBuilderTest extends TestCase
 {
     private function builder(): PayloadBuilder
     {
-        return new PayloadBuilder(new TrackingParamsExtractor(), new LocaleResolver());
+        return new PayloadBuilder(new TrackingParamsExtractor(), new SearchTermExtractor(), new LocaleResolver());
     }
 
     public function test_builds_page_view_payload_from_request(): void
@@ -51,6 +53,35 @@ class PayloadBuilderTest extends TestCase
         );
 
         $this->assertSame('https://spa.example.test/dashboard', $payload->url);
+    }
+
+    public function test_captures_the_current_requests_route_name(): void
+    {
+        $request = Request::create('https://example.test/pricing', 'GET');
+        $route = (new Route('GET', 'pricing', []))->name('pricing.show');
+        $request->setRouteResolver(fn () => $route);
+
+        $payload = $this->builder()->build($request, 'tok123', Event::TYPE_PAGE_VIEW);
+
+        $this->assertSame('pricing.show', $payload->routeName);
+    }
+
+    public function test_route_name_is_null_when_url_is_overridden(): void
+    {
+        // an explicit $url (the /visits/collect case) means the *current* request's own route
+        // (visits.collect) is never the page being reported — must not leak through as route_name
+        $request = Request::create('https://example.test/visits/collect', 'POST');
+        $route = (new Route('POST', 'visits/collect', []))->name('visits.collect');
+        $request->setRouteResolver(fn () => $route);
+
+        $payload = $this->builder()->build(
+            $request,
+            'tok123',
+            Event::TYPE_PAGE_VIEW,
+            url: 'https://spa.example.test/dashboard',
+        );
+
+        $this->assertNull($payload->routeName);
     }
 
     public function test_captures_authenticated_user(): void

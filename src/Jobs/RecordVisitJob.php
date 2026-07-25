@@ -15,6 +15,7 @@ use Fomvasss\Visits\Models\Session;
 use Fomvasss\Visits\Models\Visitor;
 use Fomvasss\Visits\Support\DeviceResolver;
 use Fomvasss\Visits\Support\GeoResolver;
+use Fomvasss\Visits\Support\IpExcluder;
 use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -23,9 +24,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
- * Everything expensive lives here, off the request/response cycle: bot detection runs first
- * (before geo, so bot traffic never pays for it), then the per-visitor event budget, then geo,
- * then the actual Visitor/Session/Event writes.
+ * Everything expensive lives here, off the request/response cycle: excluded-IP check first
+ * (cheapest, most decisive), then bot detection (before geo, so bot traffic never pays for it),
+ * then the per-visitor event budget, then geo, then the actual Visitor/Session/Event writes.
  */
 class RecordVisitJob implements ShouldQueue
 {
@@ -37,8 +38,12 @@ class RecordVisitJob implements ShouldQueue
     {
     }
 
-    public function handle(DeviceResolver $deviceResolver, GeoResolver $geoResolver): void
+    public function handle(DeviceResolver $deviceResolver, GeoResolver $geoResolver, IpExcluder $ipExcluder): void
     {
+        if ($ipExcluder->isExcluded($this->payload->ip)) {
+            return;
+        }
+
         $device = $deviceResolver->resolve($this->payload->userAgent);
 
         if ($this->isOverBudget()) {
@@ -131,6 +136,7 @@ class RecordVisitJob implements ShouldQueue
                 'first_landing_url' => $this->payload->url,
                 'first_referrer_url' => $this->payload->referrer,
                 'first_referrer_host' => $this->referrerHost(),
+                'search_term' => $this->payload->searchTerm,
                 'extra_params' => $this->payload->extraParams !== [] ? $this->payload->extraParams : null,
                 ...$this->prefixedUtm($this->payload->utm),
             ]);
@@ -188,6 +194,7 @@ class RecordVisitJob implements ShouldQueue
             'landing_url' => $this->payload->url,
             'referrer_url' => $this->payload->referrer,
             'referrer_host' => $this->referrerHost(),
+            'search_term' => $this->payload->searchTerm ?? $visitor->search_term,
             'extra_params' => $extraParams !== [] ? $extraParams : null,
             'ip' => $this->payload->ip,
             'country_code' => $geo['country_code'] ?? null,
@@ -261,6 +268,7 @@ class RecordVisitJob implements ShouldQueue
             'type' => $this->payload->type,
             'name' => $this->payload->name,
             'url' => $this->payload->url,
+            'route_name' => $this->payload->routeName,
             'is_bot' => $device['is_bot'],
             'bot_name' => $device['bot_name'],
             'bot_category' => $device['bot_category'],

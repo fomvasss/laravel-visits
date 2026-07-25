@@ -179,6 +179,32 @@ Query-параметри розділені трьома способами (`co
 
 Детекція девайса/браузера/платформи та класифікація ботів йде через `matomo/device-detector`, що компілює свій набір правил при першому використанні і кешує його в `visits.device_detection.cache_dir`. Бот-трафік ніколи не платить за гео-лукап (перевіряється першим), і запити дашборду виключають ботів за замовчуванням (див. `ExcludesBotsByDefault` — використай `withBots()`/`onlyBots()`, щоб повернути їх у будь-якому запиті).
 
+### Використання MaxMind-драйвера
+
+Драйвери `stevebauman/location` за замовчуванням роблять зовнішній HTTP-запит на кожен лукап. Для self-hosted альтернативи без зовнішніх запитів — перемкнись на локальний MaxMind (GeoLite2) драйвер:
+
+1. Отримай безкоштовний license key на [MaxMind](https://www.maxmind.com/en/geolite2/signup) і додай у `.env`:
+   ```
+   MAXMIND_LICENSE_KEY=your-key-here
+   ```
+2. У `config/location.php` (публікується самим `stevebauman/location`, не цим пакетом — `php artisan vendor:publish --provider="Stevebauman\Location\LocationServiceProvider"`) встанови MaxMind драйвером, а HTTP-драйвер лиши як fallback:
+   ```php
+   'driver' => \Stevebauman\Location\Drivers\MaxMind::class,
+   'fallbacks' => [
+       \Stevebauman\Location\Drivers\IpApi::class,
+   ],
+   ```
+3. Завантаж `.mmdb` базу:
+   ```bash
+   php artisan location:update
+   ```
+4. Додай директорію завантаженої бази (`database/maxmind` за замовчуванням) у `.gitignore` свого застосунку — це бінарний файл, який перезавантажується, а не комітиться.
+5. GeoLite2-бази MaxMind оновлює приблизно щотижня. Плануй `location:update` періодично (наприклад, щотижня), щоб дані лишались актуальними:
+   ```php
+   // routes/console.php
+   Schedule::command('location:update')->weekly();
+   ```
+
 ## Згода (GDPR)
 
 ```php
@@ -273,6 +299,15 @@ class Visitor extends \Fomvasss\Visits\Models\Visitor
 - **Visitors** (`/visits/visitors`) — та сама ідея, один рядок на `Visitor`, з фільтром "тільки повторні" й кількістю сесій; веде на деталі відвідувача (`/visits/visitors/{id}`).
 - **Live** (`/visits/live`) — недавні події як згасаючі маркери-спалахи на мапі світу, плюс таблиця-лог, що скролиться, під нею (з посиланням назад на сторінку деталей кожної сесії). Не справжній реал-тайм — події проходять через чергу, перш ніж потрапити сюди, тож спалах відображає "нещодавно оброблено", а не точну мить, коли це сталося. Дивись [Сторінку Live-активності](#сторінка-live-активності) нижче щодо вибору polling vs. SSE.
 - **Whoami** (`/visits/me`) — власне представлення дашбордом даних [Whoami](#ендпоінт-whoami), з формою для перевірки іншого IP.
+
+### "Breakdown by: Sessions vs Conversions"
+
+Перемикач на Overview/Campaigns (`?breakdown_metric=`) змінює саме те, що́ рахують панелі розбивки, а не лише групування:
+
+- **Sessions** рахує візити — обсяг трафіку по джерелу (UTM, referrer, країна, ...).
+- **Conversions** рахує самі conversion-*події* (`Visits::track()` / `Event::TYPE_ACTION`, не `page_view`) — сесія з 2 конверсіями рахує як 2, не як "1 сесія з подіями".
+
+Це різні одиниці виміру, тож цифри відрізняються між режимами — це очікувано, не баг. Перемикання на Conversions на Overview ще й додає панель "Conversion event" — розбивку по самій `name` дії.
 
 ### Сторінка Live-активності
 

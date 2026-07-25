@@ -10,6 +10,11 @@
         ];
     @endphp
 
+    <div class="flex items-center gap-1.5 mb-4 text-xs text-gray-500 dark:text-gray-400" title="Sessions active in the last {{ $onlineWindow }} minute(s)">
+        <span class="inline-block w-2 h-2 rounded-full {{ $onlineNow > 0 ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700' }}"></span>
+        {{ number_format($onlineNow) }} online now
+    </div>
+
     <form method="GET" class="flex flex-wrap items-end gap-3 mb-6 text-xs">
         <div>
             <label class="block text-gray-500 dark:text-gray-400 mb-1">From</label>
@@ -66,6 +71,22 @@
     </div>
 
     @include('visits::dashboard.partials.breakdown-panels', ['breakdowns' => $breakdowns, 'dimensionLabels' => $dimensionLabels])
+
+    <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-6">
+        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Top pages</div>
+        @if($topPages->isEmpty())
+            <div class="text-xs text-gray-400 dark:text-gray-600">No data</div>
+        @else
+            <div class="text-xs">
+                @foreach($topPages as $page)
+                    <div class="flex justify-between gap-4 py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                        <span class="text-gray-700 dark:text-gray-300 truncate" title="{{ $page['url'] }}">{{ $page['url'] }}</span>
+                        <span class="text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ number_format($page['count']) }}</span>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
 
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-6">
         <div class="flex items-center justify-between mb-3">

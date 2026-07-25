@@ -113,6 +113,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Excluded IPs
+    |--------------------------------------------------------------------------
+    |
+    | Never tracked regardless of entry point (automatic page view, JS beacon,
+    | or a server-side Visits::track() call) — typically the office/internal
+    | network. Literal IPs and/or CIDR ranges, IPv4 or IPv6:
+    | ['203.0.113.42', '198.51.100.0/24', '2001:db8::/32'].
+    |
+    */
+
+    'exclude_ips' => [],
+
+    /*
+    |--------------------------------------------------------------------------
     | Tracking Params (UTM / ref / extra_params)
     |--------------------------------------------------------------------------
     |
@@ -153,6 +167,30 @@ return [
             'li_fat_id', // LinkedIn Ads
         ],
         'extra_pattern' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Search Engines
+    |--------------------------------------------------------------------------
+    |
+    | Organic search keyword extraction — not part of tracking_params above,
+    | since it reads the *referrer* URL's query string, not the current
+    | request's own. host_contains: query_param — any referrer whose host
+    | contains the key has its keyword captured from that query param, into
+    | Visitor.search_term (first-touch) / Session.search_term (last-touch,
+    | same pattern as UTM). Most search engines stop sending a real referrer
+    | over HTTPS-to-HTTPS navigation ("keyword not provided") — this only
+    | catches the cases where one still arrives.
+    |
+    */
+
+    'search_engines' => [
+        'google.' => 'q',
+        'bing.com' => 'q',
+        'duckduckgo.com' => 'q',
+        'search.yahoo.com' => 'p',
+        'yandex.' => 'text',
     ],
 
     /*
@@ -336,6 +374,11 @@ return [
         'map_tile_url' => env('VISITS_DASHBOARD_MAP_TILE_URL', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
         // Max markers rendered — capped so a busy site doesn't try to plot thousands at once.
         'map_marker_limit' => env('VISITS_DASHBOARD_MAP_MARKER_LIMIT', 300),
+        // Overview's "Top Pages" panel — how many of the most-visited URLs to show.
+        'top_pages_limit' => env('VISITS_DASHBOARD_TOP_PAGES_LIMIT', 10),
+        // Overview's "online now" count — a session counts as online if still open
+        // (ended_at is null) and active within this many minutes.
+        'online_window_minutes' => env('VISITS_DASHBOARD_ONLINE_WINDOW_MINUTES', 5),
     ],
 
     /*

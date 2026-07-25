@@ -17,6 +17,7 @@ class PayloadBuilder
 {
     public function __construct(
         private readonly TrackingParamsExtractor $paramsExtractor,
+        private readonly SearchTermExtractor $searchTermExtractor,
         private readonly LocaleResolver $localeResolver,
     ) {
     }
@@ -32,6 +33,7 @@ class PayloadBuilder
     ): VisitPayload {
         $locale = $this->localeResolver->resolve($request);
         $authUser = $request->user();
+        $referrer = $request->header('referer');
 
         return new VisitPayload(
             token: $token,
@@ -40,9 +42,14 @@ class PayloadBuilder
             // explicit $url wins — the /visits/collect endpoint's own URL is never the page the
             // JS beacon is reporting (SPA route change), the client sends the real one instead.
             url: $url ?? $request->fullUrl(),
+            // same reasoning: only capture the *current* request's matched route when nothing
+            // overrode the URL — otherwise this would resolve to visits.collect itself, not the
+            // page the client is reporting.
+            routeName: $url === null ? $request->route()?->getName() : null,
             ip: $request->ip(),
             userAgent: (string) $request->userAgent(),
-            referrer: $request->header('referer'),
+            referrer: $referrer,
+            searchTerm: $this->searchTermExtractor->extract($referrer),
             utm: $this->paramsExtractor->extractCore($request),
             extraParams: $this->paramsExtractor->extractExtra($request),
             locale: $locale['locale'],

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Http\Controllers;
 
+use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
 use Fomvasss\Visits\Models\StatDaily;
 use Fomvasss\Visits\Support\ModelResolver;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DashboardController extends Controller
@@ -204,6 +206,15 @@ class DashboardController extends Controller
         // and joining through visitor for this one supplementary stat isn't worth it.
         $sessionClass = ModelResolver::session();
         $rangeEnd = $to->copy()->endOfDay();
+
+        // "online now" — a live snapshot, independent of the selected ?from=/?to= range on
+        // purpose (it answers "right now", not "during the filtered period").
+        $onlineWindow = (int) config('visits.dashboard.online_window_minutes', 5);
+        $onlineNow = (int) $sessionClass::query()
+            ->whereNull('ended_at')
+            ->where('last_activity_at', '>=', now()->subMinutes($onlineWindow))
+            ->count();
+
         $botSessions = (int) $sessionClass::onlyBots()->whereBetween('started_at', [$from, $rangeEnd])->count();
         $totalSessionsRaw = $botSessions + (int) $sessionClass::query()->whereBetween('started_at', [$from, $rangeEnd])->count();
         $botPercentage = $totalSessionsRaw > 0 ? round($botSessions / $totalSessionsRaw * 100, 1) : 0.0;
@@ -227,9 +238,25 @@ class DashboardController extends Controller
             ])
             ->values();
 
+        // most-visited pages — like the map/bot summary above, not worth a visit_stats_daily
+        // dimension: url is unbounded cardinality, a daily rollup row per unique URL would
+        // dwarf every other dimension combined. Read raw events directly instead, capped.
+        $eventClass = ModelResolver::event();
+        $topPages = $eventClass::query()
+            ->where('type', Event::TYPE_PAGE_VIEW)
+            ->whereNotNull('url')
+            ->whereBetween('created_at', [$from, $rangeEnd])
+            ->select(['url', DB::raw('count(*) as cnt')])
+            ->groupBy('url')
+            ->orderByDesc('cnt')
+            ->limit((int) config('visits.dashboard.top_pages_limit', 10))
+            ->get()
+            ->map(fn ($row) => ['url' => $row->url, 'count' => (int) $row->cnt])
+            ->values();
+
         return view('visits::dashboard.index', compact(
             'totals', 'trends', 'trendDates', 'breakdowns', 'breakdownMetric', 'from', 'to', 'tenantId', 'tenants',
-            'botSessions', 'botPercentage', 'mapMarkers'
+            'botSessions', 'botPercentage', 'mapMarkers', 'topPages', 'onlineNow', 'onlineWindow'
         ));
     }
 
