@@ -43,6 +43,7 @@
             <span class="text-gray-500 dark:text-gray-400">Include bots</span>
         </label>
         <button class="px-3 py-1.5 rounded bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-xs">Apply</button>
+        <a href="{{ route('visits.visitors') }}" class="px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-xs">Reset</a>
     </form>
 
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto">
@@ -50,12 +51,12 @@
             <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                 <tr>
                     <th class="text-left px-3 py-2">Token</th>
-                    <th class="text-left px-3 py-2">First seen</th>
-                    <th class="text-left px-3 py-2">Last seen</th>
-                    <th class="text-right px-3 py-2">Sessions</th>
-                    <th class="text-left px-3 py-2">Country</th>
-                    <th class="text-left px-3 py-2">Device</th>
-                    <th class="text-left px-3 py-2">UTM source</th>
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'first_seen_at', 'label' => 'First seen'])
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'last_seen_at', 'label' => 'Last seen'])
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'sessions_count', 'label' => 'Sessions', 'align' => 'right'])
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'country_code', 'label' => 'Country'])
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'device_type', 'label' => 'Device'])
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'utm_source', 'label' => 'UTM source'])
                     <th class="text-left px-3 py-2">User</th>
                     <th class="text-left px-3 py-2"></th>
                 </tr>

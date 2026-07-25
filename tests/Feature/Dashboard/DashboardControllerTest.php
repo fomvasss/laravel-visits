@@ -108,6 +108,106 @@ class DashboardControllerTest extends TestCase
                 && $sessions->first()->country_code === 'UA');
     }
 
+    public function test_sessions_list_filters_by_visitor_id(): void
+    {
+        $visitor = Visitor::factory()->create();
+        Session::factory()->create(['visitor_id' => $visitor->id]);
+        Session::factory()->create(); // unrelated visitor
+
+        $this->get(route('visits.sessions', ['visitor_id' => $visitor->id]))
+            ->assertOk()
+            ->assertViewHas('sessions', fn ($sessions) => $sessions->count() === 1
+                && $sessions->first()->visitor_id === $visitor->id);
+    }
+
+    public function test_visitor_page_links_session_count_to_the_filtered_sessions_list(): void
+    {
+        $visitor = Visitor::factory()->create();
+        Session::factory()->count(2)->create(['visitor_id' => $visitor->id]);
+
+        $response = $this->get(route('visits.visitor', $visitor->id));
+
+        $response->assertOk();
+        $response->assertSee(route('visits.sessions', ['visitor_id' => $visitor->id]), false);
+    }
+
+    public function test_sessions_list_filters_by_ip(): void
+    {
+        Session::factory()->create(['ip' => '203.0.113.10']);
+        Session::factory()->create(['ip' => '203.0.113.20']);
+
+        $this->get(route('visits.sessions', ['ip' => '203.0.113.10']))
+            ->assertOk()
+            ->assertViewHas('sessions', fn ($sessions) => $sessions->count() === 1
+                && $sessions->first()->ip === '203.0.113.10');
+    }
+
+    public function test_sessions_list_can_sort_by_ip(): void
+    {
+        Session::factory()->create(['ip' => '203.0.113.20']);
+        Session::factory()->create(['ip' => '203.0.113.10']);
+
+        $response = $this->get(route('visits.sessions', ['sort' => 'ip', 'direction' => 'asc']));
+
+        $response->assertOk();
+        $response->assertViewHas('sessions', fn ($sessions) => $sessions->first()->ip === '203.0.113.10');
+    }
+
+    public function test_sessions_list_defaults_to_started_at_descending(): void
+    {
+        $older = Session::factory()->create(['started_at' => now()->subDays(2)]);
+        $newer = Session::factory()->create(['started_at' => now()->subHour()]);
+
+        $response = $this->get(route('visits.sessions'));
+
+        $response->assertOk();
+        $response->assertViewHas('sort', 'started_at');
+        $response->assertViewHas('direction', 'desc');
+        $response->assertViewHas('sessions', fn ($sessions) => $sessions->first()->id === $newer->id);
+    }
+
+    public function test_sessions_list_can_sort_by_page_views_ascending(): void
+    {
+        $few = Session::factory()->create(['page_views_count' => 1]);
+        $many = Session::factory()->create(['page_views_count' => 10]);
+
+        $response = $this->get(route('visits.sessions', ['sort' => 'page_views_count', 'direction' => 'asc']));
+
+        $response->assertOk();
+        $response->assertViewHas('sessions', fn ($sessions) => $sessions->first()->id === $few->id
+            && $sessions->last()->id === $many->id);
+    }
+
+    public function test_sessions_list_can_sort_by_country_code(): void
+    {
+        Session::factory()->create(['country_code' => 'US']);
+        Session::factory()->create(['country_code' => 'DE']);
+
+        $response = $this->get(route('visits.sessions', ['sort' => 'country_code', 'direction' => 'asc']));
+
+        $response->assertOk();
+        $response->assertViewHas('sessions', fn ($sessions) => $sessions->first()->country_code === 'DE');
+    }
+
+    public function test_sessions_list_can_sort_by_referrer_host(): void
+    {
+        Session::factory()->create(['referrer_host' => 'newsletter.com']);
+        Session::factory()->create(['referrer_host' => 'facebook.com']);
+
+        $response = $this->get(route('visits.sessions', ['sort' => 'referrer_host', 'direction' => 'asc']));
+
+        $response->assertOk();
+        $response->assertViewHas('sessions', fn ($sessions) => $sessions->first()->referrer_host === 'facebook.com');
+    }
+
+    public function test_sessions_list_ignores_an_unwhitelisted_sort_column(): void
+    {
+        $response = $this->get(route('visits.sessions', ['sort' => 'user_agent']));
+
+        $response->assertOk();
+        $response->assertViewHas('sort', 'started_at');
+    }
+
     public function test_sessions_list_uses_simple_paginate(): void
     {
         config(['visits.dashboard.per_page' => 2]);
@@ -119,6 +219,43 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('sessions', function ($sessions) {
             return $sessions->count() === 2 && $sessions->hasMorePages();
         });
+    }
+
+    public function test_visitors_list_defaults_to_last_seen_at_descending(): void
+    {
+        $older = Visitor::factory()->create(['last_seen_at' => now()->subDays(2)]);
+        $newer = Visitor::factory()->create(['last_seen_at' => now()->subHour()]);
+
+        $response = $this->get(route('visits.visitors'));
+
+        $response->assertOk();
+        $response->assertViewHas('sort', 'last_seen_at');
+        $response->assertViewHas('visitors', fn ($visitors) => $visitors->first()->id === $newer->id);
+    }
+
+    public function test_visitors_list_can_sort_by_sessions_count(): void
+    {
+        $quiet = Visitor::factory()->create();
+        Session::factory()->create(['visitor_id' => $quiet->id]);
+
+        $active = Visitor::factory()->create();
+        Session::factory()->count(3)->create(['visitor_id' => $active->id]);
+
+        $response = $this->get(route('visits.visitors', ['sort' => 'sessions_count', 'direction' => 'desc']));
+
+        $response->assertOk();
+        $response->assertViewHas('visitors', fn ($visitors) => $visitors->first()->id === $active->id);
+    }
+
+    public function test_visitors_list_can_sort_by_utm_source(): void
+    {
+        Visitor::factory()->create(['utm_source' => 'newsletter']);
+        Visitor::factory()->create(['utm_source' => 'facebook']);
+
+        $response = $this->get(route('visits.visitors', ['sort' => 'utm_source', 'direction' => 'asc']));
+
+        $response->assertOk();
+        $response->assertViewHas('visitors', fn ($visitors) => $visitors->first()->utm_source === 'facebook');
     }
 
     public function test_visitors_list_includes_sessions_count(): void

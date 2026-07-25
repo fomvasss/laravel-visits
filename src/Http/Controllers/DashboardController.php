@@ -90,7 +90,7 @@ class DashboardController extends Controller
     public function sessions(Request $request): View
     {
         $sessionClass = ModelResolver::session();
-        $query = $sessionClass::query()->with('visitor')->latest('started_at');
+        $query = $sessionClass::query()->with('visitor');
 
         if ($request->boolean('with_bots')) {
             $query->withBots();
@@ -104,16 +104,25 @@ class DashboardController extends Controller
             $query->where('started_at', '<=', Carbon::parse($to)->endOfDay());
         }
 
-        foreach (['country_code', 'device_type', 'utm_source'] as $filter) {
+        if ($visitorId = $request->input('visitor_id')) {
+            $query->where('visitor_id', $visitorId);
+        }
+
+        foreach (['country_code', 'device_type', 'utm_source', 'ip'] as $filter) {
             if ($value = $request->input($filter)) {
                 $query->where($filter, $value);
             }
         }
 
+        [$sort, $direction] = $this->resolveSort($request, [
+            'started_at', 'page_views_count', 'duration_seconds', 'country_code', 'device_type', 'utm_source', 'referrer_host', 'ip',
+        ], 'started_at');
+        $query->orderBy($sort, $direction);
+
         // simplePaginate — no COUNT(*) query, matters once visit_sessions gets large
         $sessions = $query->simplePaginate((int) config('visits.dashboard.per_page', 50))->withQueryString();
 
-        return view('visits::dashboard.sessions', compact('sessions'));
+        return view('visits::dashboard.sessions', compact('sessions', 'sort', 'direction'));
     }
 
     public function visitors(Request $request): View
@@ -121,7 +130,7 @@ class DashboardController extends Controller
         $visitorClass = ModelResolver::visitor();
         // withCount respects the sessions() relation's own default scope (bots excluded) —
         // one correlated-subquery query, not N+1
-        $query = $visitorClass::query()->with('user')->withCount('sessions')->latest('last_seen_at');
+        $query = $visitorClass::query()->with('user')->withCount('sessions');
 
         if ($request->boolean('with_bots')) {
             $query->withBots();
@@ -149,10 +158,27 @@ class DashboardController extends Controller
             }
         }
 
+        [$sort, $direction] = $this->resolveSort($request, [
+            'first_seen_at', 'last_seen_at', 'sessions_count', 'country_code', 'device_type', 'utm_source',
+        ], 'last_seen_at');
+        $query->orderBy($sort, $direction);
+
         // simplePaginate — no COUNT(*) query, matters once visit_visitors gets large
         $visitors = $query->simplePaginate((int) config('visits.dashboard.per_page', 50))->withQueryString();
 
-        return view('visits::dashboard.visitors', compact('visitors'));
+        return view('visits::dashboard.visitors', compact('visitors', 'sort', 'direction'));
+    }
+
+    /**
+     * @param  string[]  $sortable  whitelist — column names come straight from the query string
+     * @return array{0: string, 1: string}
+     */
+    private function resolveSort(Request $request, array $sortable, string $default): array
+    {
+        $sort = in_array($request->input('sort'), $sortable, true) ? $request->input('sort') : $default;
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        return [$sort, $direction];
     }
 
     public function show(int $id): View
