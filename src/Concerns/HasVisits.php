@@ -21,11 +21,22 @@ trait HasVisits
         return $this->morphMany(ModelResolver::event(), 'eventable');
     }
 
+    /**
+     * A plain ->latestOfMany()->where('action', ...) would filter the *outer* query only —
+     * the ofMany subquery (which picks "the latest row per parent") is built independently and
+     * knows nothing about that where, so it would keep resolving to the globally-latest event
+     * and then discard it if that one doesn't match $action, even when an older matching event
+     * exists. Passing the constraint into ofMany's own closure form applies it to the subquery
+     * itself, so "latest" is computed among matching rows, not globally.
+     */
     public function latestVisitEvent(?string $action = null): MorphOne
     {
         return $this->morphOne(ModelResolver::event(), 'eventable')
-            ->latestOfMany()
-            ->when($action, fn ($query) => $query->where('action', $action));
+            ->ofMany(['created_at' => 'max'], function ($query) use ($action) {
+                if ($action) {
+                    $query->where('action', $action);
+                }
+            });
     }
 
     /**

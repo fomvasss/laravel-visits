@@ -52,8 +52,13 @@ class VisitorFactory extends Factory
             'browser' => $device['browser'],
             'client_type' => 'browser',
             'device_meta' => $device['meta'],
-            'is_bot' => fake()->boolean(3),
+            'is_bot' => false,
         ];
+    }
+
+    public function bot(): static
+    {
+        return $this->state(fn () => ['is_bot' => true]);
     }
 
     /**

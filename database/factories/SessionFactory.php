@@ -49,7 +49,12 @@ class SessionFactory extends Factory
             'user_agent' => fake()->userAgent(),
             'page_views_count' => 0,
             'duration_seconds' => $duration,
-            'is_bot' => fake()->boolean(3),
+            'is_bot' => false,
         ];
+    }
+
+    public function bot(): static
+    {
+        return $this->state(fn () => ['is_bot' => true]);
     }
 }

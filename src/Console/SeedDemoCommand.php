@@ -50,8 +50,12 @@ class SeedDemoCommand extends Command
         $bar->start();
 
         for ($i = 0; $i < $visitorCount; $i++) {
+            // VisitorFactory defaults is_bot to false (like EventFactory's own ->bot() state) —
+            // roll it explicitly here so the demo dashboard has a realistic small bot mix to show
+            // off the bot-summary feature, without making every host test using the factory flaky
             $visitor = $visitorClass::factory()->create([
                 'first_seen_at' => now()->subDays(random_int(0, $days)),
+                'is_bot' => fake()->boolean(3),
             ]);
 
             $lastActivity = $visitor->first_seen_at;
