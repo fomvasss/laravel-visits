@@ -6,6 +6,8 @@ namespace Fomvasss\Visits\Jobs;
 
 use Fomvasss\Visits\DTO\VisitPayload;
 use Fomvasss\Visits\Events\ConversionRecorded;
+use Fomvasss\Visits\Events\SessionStarted;
+use Fomvasss\Visits\Events\VisitorCreated;
 use Fomvasss\Visits\Events\VisitRecorded;
 use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
@@ -141,6 +143,10 @@ class RecordVisitJob implements ShouldQueue
 
         $visitor->save();
 
+        if ($isNew) {
+            VisitorCreated::dispatch($visitor);
+        }
+
         return $visitor;
     }
 
@@ -173,7 +179,7 @@ class RecordVisitJob implements ShouldQueue
         $utm = $this->payload->utm !== [] ? $this->payload->utm : $this->visitorUtm($visitor);
         $extraParams = $this->payload->extraParams !== [] ? $this->payload->extraParams : ($visitor->extra_params ?? []);
 
-        return $sessionClass::create([
+        $session = $sessionClass::create([
             'visitor_id' => $visitor->id,
             'user_type' => $this->payload->authUserType,
             'user_id' => $this->payload->authUserId,
@@ -202,6 +208,10 @@ class RecordVisitJob implements ShouldQueue
             'is_bot' => $device['is_bot'],
             ...$this->prefixedUtm($utm),
         ]);
+
+        SessionStarted::dispatch($session);
+
+        return $session;
     }
 
     /**

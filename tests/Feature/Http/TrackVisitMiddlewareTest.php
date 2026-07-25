@@ -97,6 +97,41 @@ class TrackVisitMiddlewareTest extends TestCase
         Queue::assertPushed(RecordVisitJob::class);
     }
 
+    public function test_dashboard_path_is_not_tracked(): void
+    {
+        Queue::fake();
+        $path = trim((string) config('visits.dashboard.path', 'visits'), '/');
+        Route::get('/' . $path, fn () => 'ok')->middleware(['web', 'track-visits']);
+        Route::get('/' . $path . '/campaigns', fn () => 'ok')->middleware(['web', 'track-visits']);
+
+        $this->get('/' . $path)->assertOk();
+        $this->get('/' . $path . '/campaigns')->assertOk();
+
+        Queue::assertNotPushed(RecordVisitJob::class);
+    }
+
+    public function test_whoami_path_is_not_tracked(): void
+    {
+        Queue::fake();
+        $path = trim((string) config('visits.whoami.path', 'visits/whoami'), '/');
+        Route::get('/' . $path, fn () => 'ok')->middleware(['web', 'track-visits']);
+
+        $this->get('/' . $path)->assertOk();
+
+        Queue::assertNotPushed(RecordVisitJob::class);
+    }
+
+    public function test_custom_dashboard_path_is_not_tracked(): void
+    {
+        Queue::fake();
+        config(['visits.dashboard.path' => 'analytics']);
+        Route::get('/analytics/sessions', fn () => 'ok')->middleware(['web', 'track-visits']);
+
+        $this->get('/analytics/sessions')->assertOk();
+
+        Queue::assertNotPushed(RecordVisitJob::class);
+    }
+
     public function test_reuses_existing_visitor_cookie_as_the_token(): void
     {
         Queue::fake();

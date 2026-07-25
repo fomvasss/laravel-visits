@@ -54,6 +54,10 @@ class TrackVisit
             return false;
         }
 
+        if ($this->isOwnRoute($request)) {
+            return false;
+        }
+
         foreach ((array) config('visits.exclude_paths', []) as $pattern) {
             if ($request->is($pattern)) {
                 return false;
@@ -65,6 +69,23 @@ class TrackVisit
         }
 
         return true;
+    }
+
+    /**
+     * The dashboard/whoami routes run under the 'web' group like any other route (so their own
+     * sessions/CSRF/etc. work normally), which would otherwise self-track: browsing your own
+     * /visits dashboard would generate page_view rows about viewing the dashboard. Checked
+     * against the configured paths directly (not a static default in exclude_paths) so this
+     * stays correct even if dashboard.path/whoami.path are customized.
+     */
+    private function isOwnRoute(Request $request): bool
+    {
+        $dashboardPath = trim((string) config('visits.dashboard.path', 'visits'), '/');
+        $whoamiPath = trim((string) config('visits.whoami.path', 'visits/whoami'), '/');
+
+        return $request->is($dashboardPath)
+            || $request->is($dashboardPath . '/*')
+            || $request->is($whoamiPath);
     }
 
     private function hasConsent(Request $request): bool

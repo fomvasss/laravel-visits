@@ -84,4 +84,59 @@ class CollectControllerTest extends TestCase
         $response->assertOk();
         $response->assertJson(['visitor_token' => $token]);
     }
+
+    public function test_allows_any_origin_when_allowed_origins_is_not_set(): void
+    {
+        Queue::fake();
+
+        $response = $this->postJson('/visits/collect', [], ['Origin' => 'https://untrusted.example.test']);
+
+        $response->assertOk();
+        Queue::assertPushed(RecordVisitJob::class);
+    }
+
+    public function test_rejects_disallowed_origin_when_allowed_origins_is_set(): void
+    {
+        Queue::fake();
+        config(['visits.collect.allowed_origins' => ['https://example.test']]);
+
+        $response = $this->postJson('/visits/collect', [], ['Origin' => 'https://untrusted.example.test']);
+
+        $response->assertStatus(403);
+        $response->assertJson(['visitor_token' => null]);
+        Queue::assertNotPushed(RecordVisitJob::class);
+    }
+
+    public function test_accepts_allowed_origin(): void
+    {
+        Queue::fake();
+        config(['visits.collect.allowed_origins' => ['https://example.test']]);
+
+        $response = $this->postJson('/visits/collect', [], ['Origin' => 'https://example.test']);
+
+        $response->assertOk();
+        Queue::assertPushed(RecordVisitJob::class);
+    }
+
+    public function test_falls_back_to_referer_when_origin_header_is_absent(): void
+    {
+        Queue::fake();
+        config(['visits.collect.allowed_origins' => ['https://example.test']]);
+
+        $response = $this->postJson('/visits/collect', [], ['Referer' => 'https://example.test/some/page']);
+
+        $response->assertOk();
+        Queue::assertPushed(RecordVisitJob::class);
+    }
+
+    public function test_rejects_when_neither_origin_nor_referer_is_present_and_allowed_origins_is_set(): void
+    {
+        Queue::fake();
+        config(['visits.collect.allowed_origins' => ['https://example.test']]);
+
+        $response = $this->postJson('/visits/collect', []);
+
+        $response->assertStatus(403);
+        Queue::assertNotPushed(RecordVisitJob::class);
+    }
 }

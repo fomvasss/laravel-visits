@@ -6,6 +6,7 @@ namespace Fomvasss\Visits\Http\Controllers;
 
 use Fomvasss\Visits\Jobs\RecordVisitJob;
 use Fomvasss\Visits\Models\Event;
+use Fomvasss\Visits\Support\OriginValidator;
 use Fomvasss\Visits\Support\PayloadBuilder;
 use Fomvasss\Visits\Support\TokenResolver;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,7 @@ class CollectController extends Controller
     public function __construct(
         private readonly TokenResolver $tokenResolver,
         private readonly PayloadBuilder $payloadBuilder,
+        private readonly OriginValidator $originValidator,
     ) {
     }
 
@@ -31,6 +33,10 @@ class CollectController extends Controller
     {
         if (! config('visits.enabled', true)) {
             return response()->json(['visitor_token' => null]);
+        }
+
+        if (! $this->originValidator->isAllowed($request)) {
+            return response()->json(['visitor_token' => null], 403);
         }
 
         $validated = $request->validate([

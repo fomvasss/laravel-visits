@@ -2,9 +2,15 @@
  * Visits JS beacon — for SPA route changes and client-side custom events that the plain
  * server-side middleware can't see. No build step: include directly or via vendor:publish.
  *
- * Usage:
+ * Usage (once this script has loaded):
  *   Visits.trackPageView();               // call on every SPA route change
  *   Visits.track('newsletter.subscribed', { plan: 'pro' });
+ *
+ * Usage (GTM dataLayer-style, safe to call before this script has loaded — e.g. from an
+ * inline <script> earlier in <head>):
+ *   window.VisitsQueue = window.VisitsQueue || [];
+ *   window.VisitsQueue.push(['trackPageView']);
+ *   window.VisitsQueue.push(['track', 'newsletter.subscribed', { plan: 'pro' }]);
  *
  * Token handling: visitor_token is read from localStorage first (client-controlled — the
  * reason this exists at all is cross-origin/cookie-unreliable setups), sent as
@@ -87,6 +93,29 @@
     }
 
     window.Visits = { track: track, trackPageView: trackPageView };
+
+    // GTM dataLayer-style buffer: calls pushed to window.VisitsQueue before this script ran
+    // (e.g. from an inline <script> in <head>, before the async-loaded beacon executes) are
+    // drained here; overriding .push makes any call pushed afterwards run immediately too, so
+    // callers never need to know whether the beacon has loaded yet.
+    function processQueued(call) {
+        var method = call[0];
+
+        if (typeof window.Visits[method] === 'function') {
+            window.Visits[method].apply(null, Array.prototype.slice.call(call, 1));
+        }
+    }
+
+    var queue = window.VisitsQueue || [];
+    queue.forEach(processQueued);
+
+    queue.push = function (call) {
+        processQueued(call);
+
+        return Array.prototype.push.call(this, call);
+    };
+
+    window.VisitsQueue = queue;
 
     if (config.autoTrackPageView !== false) {
         if (document.readyState === 'complete') {

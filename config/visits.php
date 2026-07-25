@@ -191,18 +191,77 @@ return [
     | Rate Limiting
     |--------------------------------------------------------------------------
     |
-    | Two independent layers, both in Laravel throttle format
+    | Three independent layers, all in Laravel throttle format
     | ("max,decay_minutes"):
     | endpoint: throttles POST /visits/collect, keyed by IP.
     | visitor_budget: per-visitor soft-cap enforced inside RecordVisitJob,
     |   keyed by visitor token — catches server-side/middleware tracking,
     |   which has no HTTP throttle route.
+    | whoami: throttles GET /visits/whoami, keyed by IP — public and
+    |   unauthenticated by design, so unlike collect it has no per-token
+    |   budget to fall back on.
     |
     */
 
     'rate_limit' => [
         'endpoint' => '60,1',
         'visitor_budget' => '120,1',
+        'whoami' => '60,1',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Collect Endpoint
+    |--------------------------------------------------------------------------
+    |
+    | middleware: for POST /visits/collect (the JS beacon / custom
+    |   client-side actions ingest route). Defaults to 'web' for the common
+    |   case: a Blade/session app where the beacon runs same-origin. For an
+    |   API-only backend or a decoupled SPA/mobile client on a different
+    |   origin, swap this to something without CSRF/session (e.g. ['api']) —
+    |   the token flow (X-Visitor-Token header in, visitor_token in the JSON
+    |   body out) already works without cookies; only the 'web' group's CSRF
+    |   check gets in the way. The throttle from rate_limit.endpoint above is
+    |   appended automatically, no need to repeat it here.
+    | allowed_origins: null (default) accepts requests from anywhere. Set to
+    |   an array (e.g. ['https://example.com']) to reject any request whose
+    |   Origin (falling back to Referer's scheme+host when Origin is absent)
+    |   isn't in the list. This is CORS's server-side counterpart, not a
+    |   replacement for it — CORS controls what a *browser* will let a page
+    |   fetch cross-origin; this controls what the *server* accepts,
+    |   regardless of client. Both headers are attacker-controlled and
+    |   trivially spoofed by any non-browser client (curl, a script), so
+    |   treat this as filtering casual/accidental misuse (a copy of the
+    |   beacon left on a decommissioned domain, a stray embed), never as
+    |   authentication.
+    |
+    */
+
+    'collect' => [
+        'middleware' => ['web'],
+        'allowed_origins' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Schedule
+    |--------------------------------------------------------------------------
+    |
+    | On by default — the service provider registers visits:close-stale-sessions
+    | and visits:aggregate itself, on the fixed frequencies documented in the
+    | README's "Scheduling" section, so a fresh install keeps the dashboard's
+    | rollups current and closes stale sessions without any routes/console.php
+    | edits. Turn off if you want different frequencies, or already added
+    | these to your own scheduler — this would otherwise run them twice.
+    |
+    | visits:prune is deliberately never included here even when enabled —
+    | it deletes rows, and opting into that should always be a separate,
+    | explicit decision (add it to your own scheduler when you're ready).
+    |
+    */
+
+    'schedule' => [
+        'enabled' => env('VISITS_SCHEDULE_ENABLED', true),
     ],
 
     /*

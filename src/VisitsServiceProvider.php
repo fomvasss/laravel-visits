@@ -16,6 +16,7 @@ use Fomvasss\Visits\Listeners\MergeVisitorIdentity;
 use Fomvasss\Visits\Listeners\ResetVisitorIdentity;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -57,7 +58,30 @@ class VisitsServiceProvider extends ServiceProvider
                     SeedDemoCommand::class,
                 ]);
             }
+
+            if (config('visits.schedule.enabled', false)) {
+                $this->registerSchedule();
+            }
         }
+    }
+
+    /**
+     * On by default (visits.schedule.enabled) so a fresh install doesn't silently need a
+     * hand-copied routes/console.php entry to keep rollups fresh and sessions closing. Fixed
+     * frequencies matching the README's own recommendation — different needs (or a host that
+     * already scheduled these itself) should turn the flag off rather than this growing a
+     * config-driven cron DSL. visits:prune is deliberately excluded even here: deleting rows
+     * should always be a separate, explicit opt-in, never a side effect of this flag.
+     */
+    private function registerSchedule(): void
+    {
+        $this->app->booted(function () {
+            $schedule = $this->app->make(Schedule::class);
+
+            $schedule->command('visits:close-stale-sessions')->everyFiveMinutes();
+            $schedule->command('visits:aggregate --date=today')->everyFiveMinutes();
+            $schedule->command('visits:aggregate --date=yesterday')->dailyAt('00:10');
+        });
     }
 
     private function registerMiddleware(): void
@@ -81,12 +105,18 @@ class VisitsServiceProvider extends ServiceProvider
 
     private function registerRoutes(): void
     {
-        Route::middleware(['web', 'throttle:' . config('visits.rate_limit.endpoint', '60,1')])
+        $collectMiddleware = (array) config('visits.collect.middleware', ['web']);
+        $collectMiddleware[] = 'throttle:' . config('visits.rate_limit.endpoint', '60,1');
+
+        Route::middleware($collectMiddleware)
             ->post('visits/collect', CollectController::class)
             ->name('visits.collect');
 
         if (config('visits.whoami.enabled', true)) {
-            Route::middleware(config('visits.whoami.middleware', ['web']))
+            $whoamiMiddleware = (array) config('visits.whoami.middleware', ['web']);
+            $whoamiMiddleware[] = 'throttle:' . config('visits.rate_limit.whoami', '60,1');
+
+            Route::middleware($whoamiMiddleware)
                 ->get(config('visits.whoami.path', 'visits/whoami'), WhoAmIController::class)
                 ->name('visits.whoami');
         }
