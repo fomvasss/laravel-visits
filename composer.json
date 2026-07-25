@@ -1,0 +1,64 @@
+{
+  "name": "fomvasss/laravel-visits",
+  "description": "Visitor/session/pageview tracking for Laravel: async-first, cookie + client-token identity, geo, device & bot detection, rollup analytics, dashboard",
+  "type": "library",
+  "license": "MIT",
+  "funding": [
+    {
+      "type": "custom",
+      "url": "https://send.monobank.ua/jar/5xsqtHvVrY"
+    },
+    {
+      "type": "ko_fi",
+      "url": "https://ko-fi.com/fomvasss"
+    }
+  ],
+  "keywords": ["laravel", "visits", "analytics", "tracking", "visitor", "session", "utm", "geo"],
+  "authors": [
+    {
+      "name": "fomvasss",
+      "email": "fomvasss@gmail.com",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": "^8.3",
+    "illuminate/support": "^12.0|^13.0",
+    "illuminate/contracts": "^12.0|^13.0",
+    "illuminate/queue": "^12.0|^13.0",
+    "illuminate/database": "^12.0|^13.0",
+    "illuminate/events": "^12.0|^13.0",
+    "illuminate/http": "^12.0|^13.0",
+    "stevebauman/location": "^7.6",
+    "matomo/device-detector": "^6.1"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^10.0|^11.0",
+    "phpunit/phpunit": "^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Fomvasss\\Visits\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Fomvasss\\Visits\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Fomvasss\\Visits\\VisitsServiceProvider"
+      ],
+      "aliases": {
+        "Visits": "Fomvasss\\Visits\\Facades\\Visits"
+      }
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
