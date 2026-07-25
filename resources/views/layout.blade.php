@@ -19,6 +19,7 @@
     <a href="{{ route('visits.index') }}" class="font-semibold text-gray-900 dark:text-gray-100 text-base tracking-tight">Visits</a>
     <a href="{{ route('visits.index') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Overview</a>
     <a href="{{ route('visits.sessions') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Sessions</a>
+    <a href="{{ route('visits.visitors') }}" class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Visitors</a>
     <span class="text-gray-400 dark:text-gray-500 text-xs">{{ config('app.env') }}</span>
     <div class="ml-auto">
         <button onclick="toggleTheme()"

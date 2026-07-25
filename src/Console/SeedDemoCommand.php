@@ -20,7 +20,8 @@ class SeedDemoCommand extends Command
     protected $signature = 'visits:seed-demo
         {--days=30 : Spread visitors\' first_seen_at over this many past days}
         {--visitors=150 : Number of visitors to create}
-        {--fresh : Delete existing visit_* rows first}';
+        {--fresh : Delete existing visit_* rows first}
+        {--force : Skip the --fresh confirmation prompt}';
 
     protected $description = 'Seed realistic-looking demo data for local dashboard testing';
 
@@ -30,7 +31,11 @@ class SeedDemoCommand extends Command
         $visitorCount = (int) $this->option('visitors');
 
         if ($this->option('fresh')) {
-            if (! $this->confirm('This deletes existing visit_visitors/visit_sessions/visit_events/visit_stats_daily rows. Continue?')) {
+            if (! $this->option('force') && ! $this->confirm(
+                'This deletes existing visit_visitors/visit_sessions/visit_events/visit_stats_daily rows. Continue?'
+            )) {
+                $this->info('Aborted.');
+
                 return self::SUCCESS;
             }
 
@@ -53,10 +58,23 @@ class SeedDemoCommand extends Command
 
             foreach (range(1, random_int(1, 3)) as $ignored) {
                 $started = fake()->dateTimeBetween($visitor->first_seen_at, 'now');
+                $duration = random_int(10, 1800);
+                $ended = (clone $started)->modify("+{$duration} seconds");
+
+                if ($ended > now()) {
+                    $ended = now()->toDateTime();
+                    $duration = max(1, $ended->getTimestamp() - $started->getTimestamp());
+                }
 
                 $session = $sessionClass::factory()->create([
                     'visitor_id' => $visitor->id,
+                    // override started_at/ended_at/duration together — the factory's own
+                    // definition() computes these from an unrelated random started_at, so
+                    // overriding only started_at here would leave ended_at possibly before it
                     'started_at' => $started,
+                    'last_activity_at' => $ended,
+                    'ended_at' => $ended,
+                    'duration_seconds' => $duration,
                     // inherit the visitor's attribution/geo/device for a coherent record —
                     // same idea as last-touch-inherits-from-visitor in the real pipeline
                     'utm_source' => $visitor->utm_source,
@@ -88,7 +106,13 @@ class SeedDemoCommand extends Command
                     }
                 }
 
-                $session->update(['page_views_count' => $pageViews]);
+                $exitUrl = $session->events()
+                    ->withBots()
+                    ->where('type', Event::TYPE_PAGE_VIEW)
+                    ->latest('created_at')
+                    ->value('url');
+
+                $session->update(['page_views_count' => $pageViews, 'exit_url' => $exitUrl]);
 
                 if ($session->last_activity_at->gt($lastActivity)) {
                     $lastActivity = $session->last_activity_at;

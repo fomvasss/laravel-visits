@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Console;
 
+use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
 use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Console\Command;
@@ -26,9 +27,16 @@ class CloseStaleSessionsCommand extends Command
             ->where('last_activity_at', '<', $cutoff)
             ->chunkById(500, function ($sessions) use (&$count) {
                 foreach ($sessions as $session) {
+                    $exitUrl = $session->events()
+                        ->withBots()
+                        ->where('type', Event::TYPE_PAGE_VIEW)
+                        ->latest('created_at')
+                        ->value('url');
+
                     $session->update([
                         'ended_at' => $session->last_activity_at,
                         'duration_seconds' => $session->started_at->diffInSeconds($session->last_activity_at),
+                        'exit_url' => $exitUrl,
                     ]);
                     $count++;
                 }

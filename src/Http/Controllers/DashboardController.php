@@ -46,9 +46,22 @@ class DashboardController extends Controller
             $trends[$metric] = $trendDates->map(fn ($d) => $byDate[$d] ?? 0)->values()->all();
         }
 
+        // toggle between "sessions" (traffic volume by source) and "conversions" (which
+        // source actually converts) — same 5 dimension panels, different underlying metric.
+        // "action" only makes sense once metric=conversions (a session has no single action).
+        $breakdownMetric = $request->input('breakdown_metric') === StatDaily::METRIC_CONVERSIONS
+            ? StatDaily::METRIC_CONVERSIONS
+            : StatDaily::METRIC_SESSIONS;
+
+        $breakdownDimensions = ['utm_source', 'referrer_host', 'country_code', 'device_type', 'client_type'];
+
+        if ($breakdownMetric === StatDaily::METRIC_CONVERSIONS) {
+            $breakdownDimensions[] = 'action';
+        }
+
         $breakdowns = [];
-        foreach (['utm_source', 'referrer_host', 'country_code', 'device_type', 'client_type'] as $dimension) {
-            $breakdowns[$dimension] = $rows->where('metric', StatDaily::METRIC_SESSIONS)
+        foreach ($breakdownDimensions as $dimension) {
+            $breakdowns[$dimension] = $rows->where('metric', $breakdownMetric)
                 ->where('dimension', $dimension)
                 ->groupBy('dimension_value')
                 ->map(fn ($group) => $group->sum('count'))
@@ -58,7 +71,20 @@ class DashboardController extends Controller
 
         $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
 
-        return view('visits::dashboard.index', compact('totals', 'trends', 'breakdowns', 'from', 'to', 'tenantId', 'tenants'));
+        // rollups exclude bots entirely, so this reads the raw table directly instead of
+        // extending visit_stats_daily with a bot-specific metric just for one summary line.
+        // Not tenant-scoped — Session has no tenant_id column of its own (only Visitor does),
+        // and joining through visitor for this one supplementary stat isn't worth it.
+        $sessionClass = ModelResolver::session();
+        $rangeEnd = $to->copy()->endOfDay();
+        $botSessions = (int) $sessionClass::onlyBots()->whereBetween('started_at', [$from, $rangeEnd])->count();
+        $totalSessionsRaw = $botSessions + (int) $sessionClass::query()->whereBetween('started_at', [$from, $rangeEnd])->count();
+        $botPercentage = $totalSessionsRaw > 0 ? round($botSessions / $totalSessionsRaw * 100, 1) : 0.0;
+
+        return view('visits::dashboard.index', compact(
+            'totals', 'trends', 'trendDates', 'breakdowns', 'breakdownMetric', 'from', 'to', 'tenantId', 'tenants',
+            'botSessions', 'botPercentage'
+        ));
     }
 
     public function sessions(Request $request): View
@@ -84,9 +110,49 @@ class DashboardController extends Controller
             }
         }
 
-        $sessions = $query->paginate(50)->withQueryString();
+        // simplePaginate — no COUNT(*) query, matters once visit_sessions gets large
+        $sessions = $query->simplePaginate((int) config('visits.dashboard.per_page', 50))->withQueryString();
 
         return view('visits::dashboard.sessions', compact('sessions'));
+    }
+
+    public function visitors(Request $request): View
+    {
+        $visitorClass = ModelResolver::visitor();
+        // withCount respects the sessions() relation's own default scope (bots excluded) —
+        // one correlated-subquery query, not N+1
+        $query = $visitorClass::query()->with('user')->withCount('sessions')->latest('last_seen_at');
+
+        if ($request->boolean('with_bots')) {
+            $query->withBots();
+        }
+
+        if ($request->boolean('returning_only')) {
+            $query->has('sessions', '>', 1);
+        }
+
+        if ($from = $request->input('from')) {
+            $query->where('first_seen_at', '>=', Carbon::parse($from)->startOfDay());
+        }
+
+        if ($to = $request->input('to')) {
+            $query->where('first_seen_at', '<=', Carbon::parse($to)->endOfDay());
+        }
+
+        if ($token = $request->input('token')) {
+            $query->where('token', 'like', "%{$token}%");
+        }
+
+        foreach (['country_code', 'device_type', 'utm_source'] as $filter) {
+            if ($value = $request->input($filter)) {
+                $query->where($filter, $value);
+            }
+        }
+
+        // simplePaginate — no COUNT(*) query, matters once visit_visitors gets large
+        $visitors = $query->simplePaginate((int) config('visits.dashboard.per_page', 50))->withQueryString();
+
+        return view('visits::dashboard.visitors', compact('visitors'));
     }
 
     public function show(int $id): View
@@ -94,10 +160,21 @@ class DashboardController extends Controller
         $sessionClass = ModelResolver::session();
 
         $session = $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
-            ->with(['visitor', 'events' => fn ($q) => $q->withBots()->oldest('created_at')])
+            ->with(['visitor', 'user', 'events' => fn ($q) => $q->withBots()->oldest('created_at')])
             ->findOrFail($id);
 
         return view('visits::dashboard.show', compact('session'));
+    }
+
+    public function showVisitor(int $id): View
+    {
+        $visitorClass = ModelResolver::visitor();
+
+        $visitor = $visitorClass::withoutGlobalScope(WithoutBotsScope::class)
+            ->with(['user', 'sessions' => fn ($q) => $q->withBots()->latest('started_at')])
+            ->findOrFail($id);
+
+        return view('visits::dashboard.visitor', compact('visitor'));
     }
 
     /**

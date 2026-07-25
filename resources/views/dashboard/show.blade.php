@@ -11,6 +11,9 @@
             <dl class="text-xs space-y-1.5">
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Started</dt><dd>{{ $session->started_at }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Ended</dt><dd>{{ $session->ended_at ?? 'open' }}</dd></div>
+                @if($session->exit_url)
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Exit URL</dt><dd class="truncate max-w-[60%]" title="{{ $session->exit_url }}">{{ $session->exit_url }}</dd></div>
+                @endif
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Duration</dt><dd>{{ $session->duration_seconds ? gmdate('H:i:s', $session->duration_seconds) : '—' }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Page views</dt><dd>{{ $session->page_views_count }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">IP</dt><dd>{{ $session->ip }}</dd></div>
@@ -29,16 +32,40 @@
         </div>
 
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Attribution</div>
-            <dl class="text-xs space-y-1.5">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Attribution — this session (last-touch)</div>
+            <dl class="text-xs space-y-1.5 mb-4">
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Landing URL</dt><dd class="truncate max-w-[60%]" title="{{ $session->landing_url }}">{{ $session->landing_url }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Referrer</dt><dd>{{ $session->referrer_host ?? '—' }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM source/medium</dt><dd>{{ $session->utm_source }} / {{ $session->utm_medium }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM campaign</dt><dd>{{ $session->utm_campaign }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">ref</dt><dd>{{ $session->ref }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Visitor token</dt><dd class="font-mono">{{ $session->visitor?->token }}</dd></div>
+                @if($session->extra_params)
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Extra params</dt><dd class="font-mono truncate max-w-[60%]" title="{{ json_encode($session->extra_params) }}">{{ json_encode($session->extra_params) }}</dd></div>
+                @endif
+            </dl>
+
+            @if($session->visitor)
+                <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 pt-3 border-t border-gray-100 dark:border-gray-800">Attribution — visitor (first-touch, never overwritten)</div>
+                <dl class="text-xs space-y-1.5">
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Landing URL</dt><dd class="truncate max-w-[60%]" title="{{ $session->visitor->first_landing_url }}">{{ $session->visitor->first_landing_url }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Referrer</dt><dd>{{ $session->visitor->first_referrer_host ?? '—' }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM source/medium</dt><dd>{{ $session->visitor->utm_source }} / {{ $session->visitor->utm_medium }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">UTM campaign</dt><dd>{{ $session->visitor->utm_campaign }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">ref</dt><dd>{{ $session->visitor->ref }}</dd></div>
+                    @if($session->visitor->extra_params)
+                        <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Extra params</dt><dd class="font-mono truncate max-w-[60%]" title="{{ json_encode($session->visitor->extra_params) }}">{{ json_encode($session->visitor->extra_params) }}</dd></div>
+                    @endif
+                </dl>
+            @endif
+
+            <dl class="text-xs space-y-1.5 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Visitor token</dt><dd class="font-mono">
+                    @if($session->visitor)
+                        <a href="{{ route('visits.visitor', $session->visitor->id) }}" class="text-blue-600 dark:text-blue-400">{{ $session->visitor->token }}</a>
+                    @endif
+                </dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Visitor first seen</dt><dd>{{ $session->visitor?->first_seen_at }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">User</dt><dd>{{ $session->user_type ? class_basename($session->user_type) . ' #' . $session->user_id : 'anonymous' }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">User</dt><dd>{{ $session->userDisplayName() ?? ($session->user_type ? class_basename($session->user_type) . ' #' . $session->user_id : 'anonymous') }}</dd></div>
             </dl>
         </div>
     </div>
@@ -52,16 +79,18 @@
                     <th class="text-left px-3 py-2">Action</th>
                     <th class="text-left px-3 py-2">URL</th>
                     <th class="text-left px-3 py-2">Eventable</th>
+                    <th class="text-left px-3 py-2">Meta</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($session->events as $event)
-                    <tr class="border-t border-gray-100 dark:border-gray-800">
+                    <tr class="border-t border-gray-100 dark:border-gray-800 {{ $event->is_bot ? 'opacity-50' : '' }}">
                         <td class="px-3 py-2">{{ $event->created_at?->format('H:i:s') }}</td>
-                        <td class="px-3 py-2">{{ $event->type }}</td>
+                        <td class="px-3 py-2">{{ $event->type }}{{ $event->is_bot ? ' (' . ($event->bot_name ?? 'bot') . ')' : '' }}</td>
                         <td class="px-3 py-2">{{ $event->action }}</td>
                         <td class="px-3 py-2 truncate max-w-xs" title="{{ $event->url }}">{{ $event->url }}</td>
                         <td class="px-3 py-2">{{ $event->eventable_type ? class_basename($event->eventable_type) . ' #' . $event->eventable_id : '' }}</td>
+                        <td class="px-3 py-2 truncate max-w-xs" title="{{ $event->meta ? json_encode($event->meta) : '' }}">{{ $event->meta ? json_encode($event->meta) : '' }}</td>
                     </tr>
                 @endforeach
             </tbody>

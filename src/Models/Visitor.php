@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Fomvasss\Visits\Models;
 
 use Fomvasss\Visits\Concerns\ExcludesBotsByDefault;
+use Fomvasss\Visits\Concerns\HasUserDisplayName;
 use Fomvasss\Visits\Database\Factories\VisitorFactory;
 use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,6 +17,7 @@ class Visitor extends Model
 {
     use ExcludesBotsByDefault;
     use HasFactory;
+    use HasUserDisplayName;
 
     protected $table = 'visit_visitors';
 

@@ -109,9 +109,22 @@ return [
         'enabled' => env('VISITS_DASHBOARD_ENABLED', true),
         'path' => env('VISITS_DASHBOARD_PATH', 'visits'),
         'middleware' => ['web'],
+        'per_page' => env('VISITS_DASHBOARD_PER_PAGE', 50),
     ],
 
     // Generic tenant/multi-domain marker, nullable. The package never filters by it on its own —
     // the host app is responsible for setting and scoping it if needed.
     'tenant_resolver' => null,
+
+    // user_type/user_id is polymorphic — could be App\Models\User, Admin, Client, anything the
+    // host uses — so the package can't assume a field name for "the user's display name".
+    // Tried first; falls back to the user's `email`, then to "ModelName #id" if neither exists.
+    'user_display_attribute' => env('VISITS_USER_DISPLAY_ATTRIBUTE', 'name'),
+
+    // For anything user_display_attribute can't express (combine name+email, call a
+    // fullname()-style accessor explicitly, etc) — a class implementing
+    // Fomvasss\Visits\Contracts\UserDisplayNameResolverInterface. Takes priority over
+    // user_display_attribute when set. Must be a class name, not a Closure — a Closure can't
+    // survive `php artisan config:cache`.
+    'user_display_resolver' => null,
 ];
