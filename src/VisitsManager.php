@@ -7,6 +7,7 @@ namespace Fomvasss\Visits;
 use Fomvasss\Visits\Jobs\RecordVisitJob;
 use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Support\PayloadBuilder;
+use Fomvasss\Visits\Support\RequestInspector;
 use Fomvasss\Visits\Support\TokenResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class VisitsManager
         private readonly Request $request,
         private readonly TokenResolver $tokenResolver,
         private readonly PayloadBuilder $payloadBuilder,
+        private readonly RequestInspector $requestInspector,
     ) {
     }
 
@@ -58,5 +60,19 @@ class VisitsManager
         RecordVisitJob::dispatch($payload)
             ->onConnection(config('visits.queue.connection'))
             ->onQueue(config('visits.queue.queue'));
+    }
+
+    /**
+     * Read-only "what do we see about the current request" snapshot — IP/geo/device/bot/UTM
+     * detection, same pipeline RecordVisitJob uses. Writes nothing, sets no cookie. Useful for
+     * host code (or another project depending on this package) that wants this detection
+     * without going through the /visits/whoami HTTP endpoint.
+     *
+     * @param  string|null  $ip  look up geo for this IP instead of the request's own
+     * @return array<string, mixed>
+     */
+    public function whoami(?Request $request = null, ?string $ip = null): array
+    {
+        return $this->requestInspector->inspect($request ?? $this->request, $ip);
     }
 }

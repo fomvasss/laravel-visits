@@ -302,6 +302,26 @@ class DashboardControllerTest extends TestCase
             && $visitors->first()->id === $visitor->id);
     }
 
+    public function test_show_page_links_coordinates_to_a_map_when_present(): void
+    {
+        $session = Session::factory()->create(['lat' => '50.4501', 'lng' => '30.5234']);
+
+        $response = $this->get(route('visits.show', $session->id));
+
+        $response->assertOk();
+        $response->assertSee('https://www.google.com/maps?q=50.4501000,30.5234000', false);
+    }
+
+    public function test_show_page_hides_coordinates_when_absent(): void
+    {
+        $session = Session::factory()->create(['lat' => null, 'lng' => null]);
+
+        $response = $this->get(route('visits.show', $session->id));
+
+        $response->assertOk();
+        $response->assertDontSee('Coordinates');
+    }
+
     public function test_show_returns_session_with_bot_events_included(): void
     {
         $session = Session::factory()->create();
@@ -321,6 +341,26 @@ class DashboardControllerTest extends TestCase
         $this->get(route('visits.show', $session->id))->assertOk();
     }
 
+    public function test_visitor_page_links_coordinates_to_a_map_when_present(): void
+    {
+        $visitor = Visitor::factory()->create(['lat' => '50.4501', 'lng' => '30.5234']);
+
+        $response = $this->get(route('visits.visitor', $visitor->id));
+
+        $response->assertOk();
+        $response->assertSee('https://www.google.com/maps?q=50.4501000,30.5234000', false);
+    }
+
+    public function test_visitor_page_hides_coordinates_when_absent(): void
+    {
+        $visitor = Visitor::factory()->create(['lat' => null, 'lng' => null]);
+
+        $response = $this->get(route('visits.visitor', $visitor->id));
+
+        $response->assertOk();
+        $response->assertDontSee('Coordinates');
+    }
+
     public function test_show_visitor_returns_visitor_with_all_sessions(): void
     {
         $visitor = Visitor::factory()->create();
@@ -336,5 +376,69 @@ class DashboardControllerTest extends TestCase
     public function test_show_visitor_404s_for_unknown_id(): void
     {
         $this->get(route('visits.visitor', 999999))->assertNotFound();
+    }
+
+    public function test_whoami_page_renders_and_writes_nothing(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([]);
+
+        $response = $this->get(route('visits.me'));
+
+        $response->assertOk();
+        $response->assertViewHas('data', fn ($data) => array_key_exists('ip', $data));
+        $this->assertSame(0, Visitor::withBots()->count());
+    }
+
+    public function test_whoami_page_looks_up_a_requested_ip(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([
+            '198.51.100.20' => \Stevebauman\Location\Position::make(['driver' => 'ip-api', 'country_code' => 'DE']),
+        ]);
+
+        $response = $this->get(route('visits.me', ['ip' => '198.51.100.20']));
+
+        $response->assertOk();
+        $response->assertViewHas('data', fn ($data) => $data['ip'] === '198.51.100.20' && $data['geo']['country_code'] === 'DE');
+        $response->assertViewHas('ipError', null);
+    }
+
+    public function test_whoami_page_shows_an_error_for_an_invalid_ip(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([]);
+
+        $response = $this->get(route('visits.me', ['ip' => 'not-an-ip']));
+
+        $response->assertOk();
+        $response->assertViewHas('ipError', fn ($error) => $error !== null);
+        // falls back to the real request IP rather than erroring out
+        $response->assertViewHas('data', fn ($data) => $data['ip'] !== 'not-an-ip');
+    }
+
+    public function test_whoami_page_shows_device_model_and_browser_engine_when_known(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([]);
+
+        $response = $this->withHeader(
+            'User-Agent',
+            'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.144 Mobile Safari/537.36'
+        )->get(route('visits.me'));
+
+        $response->assertOk();
+        $response->assertSee('Samsung', false);
+        $response->assertSee('Blink', false);
+    }
+
+    public function test_whoami_page_links_coordinates_to_a_map_when_present(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([
+            '198.51.100.20' => \Stevebauman\Location\Position::make([
+                'driver' => 'ip-api', 'country_code' => 'DE', 'latitude' => '52.52', 'longitude' => '13.405',
+            ]),
+        ]);
+
+        $response = $this->get(route('visits.me', ['ip' => '198.51.100.20']));
+
+        $response->assertOk();
+        $response->assertSee('https://www.google.com/maps?q=52.52,13.405', false);
     }
 }

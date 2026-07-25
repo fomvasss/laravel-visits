@@ -112,6 +112,16 @@ return [
         'per_page' => env('VISITS_DASHBOARD_PER_PAGE', 50),
     ],
 
+    // Public, read-only ifconfig.me-style endpoint (IP/geo/device/UTM detection for the
+    // current request) — writes nothing, sets no cookie. Separate path/middleware from the
+    // dashboard on purpose: other projects/services should be able to call this even when
+    // the dashboard itself is locked behind auth.
+    'whoami' => [
+        'enabled' => env('VISITS_WHOAMI_ENABLED', true),
+        'path' => env('VISITS_WHOAMI_PATH', 'visits/whoami'),
+        'middleware' => ['web'],
+    ],
+
     // Generic tenant/multi-domain marker, nullable. The package never filters by it on its own —
     // the host app is responsible for setting and scoping it if needed.
     'tenant_resolver' => null,

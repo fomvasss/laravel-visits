@@ -15,6 +15,9 @@
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Sessions</dt><dd><a href="{{ route('visits.sessions', ['visitor_id' => $visitor->id, 'with_bots' => $visitor->is_bot ? 1 : null]) }}" class="text-blue-600 dark:text-blue-400">{{ $visitor->sessions->count() }}</a></dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Total page views</dt><dd>{{ $visitor->sessions->sum('page_views_count') }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Country / city (last known)</dt><dd>{{ $visitor->geo_meta['country_name'] ?? $visitor->country_code }} / {{ $visitor->city }}</dd></div>
+                @if($visitor->lat && $visitor->lng)
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Coordinates (last known)</dt><dd class="font-mono"><a href="https://www.google.com/maps?q={{ $visitor->lat }},{{ $visitor->lng }}" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400">{{ $visitor->lat }}, {{ $visitor->lng }}</a></dd></div>
+                @endif
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Device (last known)</dt><dd>{{ $visitor->device_type }} · {{ $visitor->platform }} · {{ $visitor->browser }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Bot</dt><dd>{{ $visitor->is_bot ? 'yes' : 'no' }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">User</dt><dd>{{ $visitor->userDisplayName() ?? ($visitor->user_type ? class_basename($visitor->user_type) . ' #' . $visitor->user_id : 'anonymous') }}</dd></div>

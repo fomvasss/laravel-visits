@@ -39,6 +39,7 @@
             </select>
         </div>
         <button class="px-3 py-1.5 rounded bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-xs">Apply</button>
+        <a href="{{ route('visits.index') }}" class="px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-xs">Reset</a>
     </form>
 
     @if($botSessions > 0)

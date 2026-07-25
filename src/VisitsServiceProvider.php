@@ -10,6 +10,7 @@ use Fomvasss\Visits\Console\PruneCommand;
 use Fomvasss\Visits\Console\SeedDemoCommand;
 use Fomvasss\Visits\Http\Controllers\CollectController;
 use Fomvasss\Visits\Http\Controllers\DashboardController;
+use Fomvasss\Visits\Http\Controllers\WhoAmIController;
 use Fomvasss\Visits\Http\Middleware\TrackVisit;
 use Fomvasss\Visits\Listeners\MergeVisitorIdentity;
 use Fomvasss\Visits\Listeners\ResetVisitorIdentity;
@@ -84,6 +85,12 @@ class VisitsServiceProvider extends ServiceProvider
             ->post('visits/collect', CollectController::class)
             ->name('visits.collect');
 
+        if (config('visits.whoami.enabled', true)) {
+            Route::middleware(config('visits.whoami.middleware', ['web']))
+                ->get(config('visits.whoami.path', 'visits/whoami'), WhoAmIController::class)
+                ->name('visits.whoami');
+        }
+
         if (config('visits.dashboard.enabled', true)) {
             Route::middleware(config('visits.dashboard.middleware', ['web']))
                 ->prefix(config('visits.dashboard.path', 'visits'))
@@ -94,6 +101,7 @@ class VisitsServiceProvider extends ServiceProvider
                     Route::get('/sessions/{id}', [DashboardController::class, 'show'])->name('show');
                     Route::get('/visitors', [DashboardController::class, 'visitors'])->name('visitors');
                     Route::get('/visitors/{id}', [DashboardController::class, 'showVisitor'])->name('visitor');
+                    Route::get('/me', [DashboardController::class, 'whoami'])->name('me');
                 });
         }
     }

@@ -71,4 +71,49 @@ class VisitsManagerTest extends TestCase
         Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->action === 'newsletter.subscribed'
             && $job->payload->eventableType === null);
     }
+
+    public function test_whoami_uses_the_current_request_by_default(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([]);
+
+        $data = Visits::whoami();
+
+        $this->assertArrayHasKey('ip', $data);
+        $this->assertArrayHasKey('device', $data);
+        $this->assertArrayHasKey('geo', $data);
+    }
+
+    public function test_whoami_accepts_an_explicit_request(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([]);
+
+        $request = Request::create('/?utm_source=newsletter', 'GET');
+        $request->headers->set('User-Agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)');
+
+        $data = Visits::whoami($request);
+
+        $this->assertTrue($data['bot']['is_bot']);
+        $this->assertSame('newsletter', $data['tracking_params']['utm']['utm_source']);
+    }
+
+    public function test_whoami_writes_nothing_to_the_database(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([]);
+
+        Visits::whoami();
+
+        $this->assertSame(0, \Fomvasss\Visits\Models\Visitor::withBots()->count());
+    }
+
+    public function test_whoami_accepts_an_explicit_ip_to_look_up(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([
+            '198.51.100.20' => \Stevebauman\Location\Position::make(['driver' => 'ip-api', 'country_code' => 'DE']),
+        ]);
+
+        $data = Visits::whoami(ip: '198.51.100.20');
+
+        $this->assertSame('198.51.100.20', $data['ip']);
+        $this->assertSame('DE', $data['geo']['country_code']);
+    }
 }

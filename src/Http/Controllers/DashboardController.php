@@ -7,6 +7,7 @@ namespace Fomvasss\Visits\Http\Controllers;
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
 use Fomvasss\Visits\Models\StatDaily;
 use Fomvasss\Visits\Support\ModelResolver;
+use Fomvasss\Visits\VisitsManager;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -14,6 +15,25 @@ use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
+    public function whoami(Request $request, VisitsManager $visits): View
+    {
+        $requestedIp = $request->input('ip');
+        $ipError = null;
+        $ip = null;
+
+        if (is_string($requestedIp) && $requestedIp !== '') {
+            if (filter_var($requestedIp, FILTER_VALIDATE_IP)) {
+                $ip = $requestedIp;
+            } else {
+                $ipError = "\"{$requestedIp}\" is not a valid IP address.";
+            }
+        }
+
+        $data = $visits->whoami($request, $ip);
+
+        return view('visits::dashboard.whoami', compact('data', 'requestedIp', 'ipError'));
+    }
+
     public function index(Request $request): View
     {
         [$from, $to] = $this->resolveRange($request);

@@ -18,6 +18,9 @@
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Page views</dt><dd>{{ $session->page_views_count }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">IP</dt><dd>{{ $session->ip }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Country / city</dt><dd>{{ $session->geo_meta['country_name'] ?? $session->country_code }} / {{ $session->city }}</dd></div>
+                @if($session->lat && $session->lng)
+                    <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Coordinates</dt><dd class="font-mono"><a href="https://www.google.com/maps?q={{ $session->lat }},{{ $session->lng }}" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400">{{ $session->lat }}, {{ $session->lng }}</a></dd></div>
+                @endif
                 @if($session->geo_meta['currency_code'] ?? null)
                     <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Currency</dt><dd>{{ $session->geo_meta['currency_code'] }}</dd></div>
                 @endif
