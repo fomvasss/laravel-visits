@@ -84,23 +84,35 @@ class VisitsServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Deferred to booted() rather than run inline here — Router::pushMiddlewareToGroup()/
+     * aliasMiddleware() called directly from boot() can be silently undone by a *later*
+     * provider's own boot(). Laravel 11/12's bootstrap/app.php-based middleware config
+     * (`->withMiddleware()`) resolves the HTTP Kernel and calls
+     * Kernel::setMiddlewareGroups()/setMiddlewareAliases() — both fully *replace* (not merge)
+     * the router's groups/aliases and can fire again after this provider already ran,
+     * wiping out anything pushed here. booted() fires strictly after every provider's boot()
+     * has completed, so anything registered inside it is the last word.
+     */
     private function registerMiddleware(): void
     {
-        $router = $this->app['router'];
-        $router->aliasMiddleware('track-visits', TrackVisit::class);
+        $this->app->booted(function () {
+            $router = $this->app['router'];
+            $router->aliasMiddleware('track-visits', TrackVisit::class);
 
-        if (! config('visits.enabled', true) || ! config('visits.auto_track', true)) {
-            return;
-        }
+            if (! config('visits.enabled', true) || ! config('visits.auto_track', true)) {
+                return;
+            }
 
-        // guard against double-registration: boot() can run more than once per process
-        // under Octane, and pushMiddlewareToGroup() would otherwise append duplicates,
-        // causing RecordVisitJob to be dispatched more than once per request.
-        $webGroup = $router->getMiddlewareGroups()['web'] ?? [];
+            // guard against double-registration: boot() can run more than once per process
+            // under Octane, and pushMiddlewareToGroup() would otherwise append duplicates,
+            // causing RecordVisitJob to be dispatched more than once per request.
+            $webGroup = $router->getMiddlewareGroups()['web'] ?? [];
 
-        if (! in_array(TrackVisit::class, $webGroup, true)) {
-            $router->pushMiddlewareToGroup('web', TrackVisit::class);
-        }
+            if (! in_array(TrackVisit::class, $webGroup, true)) {
+                $router->pushMiddlewareToGroup('web', TrackVisit::class);
+            }
+        });
     }
 
     private function registerRoutes(): void

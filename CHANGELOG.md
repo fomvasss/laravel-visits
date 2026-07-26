@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-07-26
+
+### Fixed
+- `TrackVisit` could silently never end up in the `web` middleware group despite `auto_track=true` — `registerMiddleware()`'s `Router::pushMiddlewareToGroup()`/`aliasMiddleware()` calls ran inline in `boot()`, but on Laravel 11/12's `bootstrap/app.php`-based middleware config, `Kernel::setMiddlewareGroups()`/`setMiddlewareAliases()` (which fully *replace*, not merge, the router's groups/aliases) can fire again after this provider already ran — wiping out the push, with no error to signal it (reproduced in a plain script mirroring `public/index.php`, unrelated to Octane). Now deferred to `$this->app->booted()`, which runs strictly after every provider's `boot()` has completed, so this provider's registration is always the last word.
+
 ## [0.9.1] - 2026-07-26
 
 ### Changed
