@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-07-26
+
+### Changed
+- `visits:seed-demo` was only registered when `APP_ENV` was `local`/`testing`, so it was missing (`Command "visits:seed-demo" is not defined`) on any other non-production environment (e.g. a `develop`/staging server used to demo the dashboard). Now registered whenever the app is not `production`.
+
 ## [0.9.0] - 2026-07-26
 
 ### Fixed

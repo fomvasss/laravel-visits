@@ -493,7 +493,7 @@ Deletes raw `visit_events`/`visit_sessions`/`visit_visitors` rows older than the
 php artisan visits:seed-demo --visitors=150 --days=30 --fresh --force
 ```
 
-Dev/testing only (registered in `local`/`testing` environments only) — generates realistic-looking Visitor → Session → Event chains with coherent geo/device/UTM data, then runs `visits:aggregate` over the seeded range so the dashboard isn't empty. `--fresh` truncates existing `visit_*` tables first (prompts for confirmation unless `--force` is also passed).
+Not available in production (registered in any non-`production` environment) — generates realistic-looking Visitor → Session → Event chains with coherent geo/device/UTM data, then runs `visits:aggregate` over the seeded range so the dashboard isn't empty. `--fresh` truncates existing `visit_*` tables first (prompts for confirmation unless `--force` is also passed).
 
 ### Scheduling
 

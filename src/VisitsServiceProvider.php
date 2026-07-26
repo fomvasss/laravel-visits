@@ -52,8 +52,8 @@ class VisitsServiceProvider extends ServiceProvider
                 PruneCommand::class,
             ]);
 
-            // dev/testing tool only — never registered outside local/testing
-            if ($this->app->environment('local', 'testing')) {
+            // demo/seed tool — available everywhere except production
+            if (! $this->app->environment('production')) {
                 $this->commands([
                     SeedDemoCommand::class,
                 ]);
