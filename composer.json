@@ -1,6 +1,6 @@
 {
   "name": "fomvasss/laravel-visits",
-  "description": "Visitor/session/pageview tracking for Laravel: async-first, cookie + client-token identity, geo, device & bot detection, rollup analytics, dashboard",
+  "description": "Self-hosted, first-party analytics platform for Laravel: visitor/session/event tracking, geo/device/bot detection, campaign attribution, custom conversions tied to your own Eloquent models, rollup analytics, dashboard",
   "type": "library",
   "license": "MIT",
   "funding": [

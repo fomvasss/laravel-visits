@@ -6,16 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-26
+
 ### Added
 - `docs/client-integration.md`: handing off an already-existing identifier from another system (a separate landing page, a legacy tracker's `anon_id`) to become the same `Visitor` from the first hit on the main site — via `?visitor_id=...` on the handoff link, or a shared cookie on a common registrable domain
 - `visits.visitor_id.format_regex` — the accepted client-supplied identifier format is now configurable (previously hardcoded to `^[a-zA-Z0-9]{20,64}$`), so identifiers like UUIDs from another system can be accepted without normalizing them first
 - `visits.auto_track` (default `true`) — set to `false` to stop `TrackVisit` from auto-attaching to the global `web` middleware group (denylist via `exclude_paths`) and instead attach the `track-visits` alias to only the specific routes you want tracked (allowlist)
 - `Event.path` — the `url` column's path component only (no query string), computed once at write time
 - `docs/client-integration.md`: full-page HTTP caching (nginx `fastcgi_cache`/`proxy_cache`) — why `TrackVisit` undercounts on cache HITs, the cached-`Set-Cookie` identity-leak risk, using the JS beacon for cached routes instead, and the cached-CSRF-meta-tag failure mode
+- README/README.uk: expanded "Geo & Device Detection" with the exact field list captured — core columns vs `geo_meta`/`device_meta` JSON bucket contents, the `Visitor` (last-known, mutable) vs `Session` (immutable snapshot) split, and where bot detail (`bot_name`/`bot_category`) actually lives
+- README/README.uk: "When to Use This (vs GA4, Plausible, Matomo)" — honest positioning, not a feature-count comparison
+- `docs/architecture.md` — contributor-level internals: what differs between the three entry points, the full `RecordVisitJob` sequence, the data model (ER diagram), every Support class's single responsibility, and the events/listeners table
+- README/README.uk: a "Contents" table of links at the top — both had grown to ~20 top-level sections
+- README/README.uk: Mermaid flowchart in "How It Works" showing the sync/async boundary (token resolve + cookie queue happen inline; bot/geo/device detection and all DB writes happen in the queued `RecordVisitJob`) — GitHub renders it natively
 
 ### Changed
 - **Breaking:** the client-facing visitor identifier is renamed from "token" to "id" throughout, to stop implying an auth/security artifact for what is an unauthenticated, spoofable, attribution-only value — `X-Visitor-Token` header → `X-Visitor-Id`, `visitor_token` input/JSON key → `visitor_id`, `visits_token` cookie name → `visits_visitor_id`. Update any client code that reads/sends the old names.
 - Overview's "Top Pages" panel now groups by `Event.path` instead of the raw `url` — a page with filter/sort query-string params (e.g. a product catalog) previously fragmented into one row per parameter combination; now it counts as one page. Events recorded before this change have `path = null` and are excluded from the panel (not backfilled).
+- README/README.uk: dashboard screenshot moved from deep inside the "Dashboard" section up to right under the intro paragraph, so it's visible without scrolling past a dozen other sections first
+- README/README.uk: "When to Use This" moved from right after Features down to just before Security Considerations — a decision-support/comparison section, better placed after the reader has actually seen what the package does than blocking the install/usage flow at the top
+- README/README.uk/composer.json: intro description rewritten — the package has grown well past "pageview tracking" (campaign attribution, conversions on your own models, live map, rollup analytics, a full dashboard); the one-liner now says so instead of underselling it
 
 ## [0.3.0] - 2026-07-26
 

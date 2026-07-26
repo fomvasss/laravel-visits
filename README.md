@@ -4,9 +4,42 @@
 [![Latest Stable Version](https://img.shields.io/packagist/v/fomvasss/laravel-visits.svg?style=for-the-badge)](https://packagist.org/packages/fomvasss/laravel-visits)
 [![Total Downloads](https://img.shields.io/packagist/dt/fomvasss/laravel-visits.svg?style=for-the-badge)](https://packagist.org/packages/fomvasss/laravel-visits)
 
-Visitor/session/pageview tracking for Laravel: async-first, cookie + client-token identity, geo, device & bot detection, campaign (UTM) attribution, custom conversion events, rollup analytics, and a built-in dashboard — including a live activity map.
+A self-hosted, first-party analytics platform for Laravel — not just pageview logging: visitor/session/event tracking, geo/device/bot detection, campaign attribution, conversions tied directly to your own Eloquent models, rollup analytics, and a full dashboard with a live activity map — all in your own database.
 
 [Українська документація](README.uk.md)
+
+![Dashboard](art/dashboard.gif)
+
+## Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+- [Tracking](#tracking)
+  - [Automatic page views](#automatic-page-views)
+  - [Custom actions (server-side)](#custom-actions-server-side)
+  - [JS beacon](#js-beacon)
+  - [Identity resolution](#identity-resolution)
+- [Tracking Params](#tracking-params)
+- [Geo & Device Detection](#geo--device-detection)
+  - [Using the MaxMind driver](#using-the-maxmind-driver)
+- [Consent (GDPR)](#consent-gdpr)
+- [Multi-Tenancy](#multi-tenancy)
+- [Overriding Models](#overriding-models)
+- [Events](#events)
+- [Whoami Endpoint](#whoami-endpoint)
+- [Dashboard](#dashboard)
+  - [Live Activity Page](#live-activity-page)
+- [Console Commands](#console-commands)
+  - [Scheduling](#scheduling)
+- [Configuration](#configuration)
+- [When to Use This (vs GA4, Plausible, Matomo)](#when-to-use-this-vs-ga4-plausible-matomo)
+- [Security Considerations](#security-considerations)
+- [Testing](#testing)
+- [Support](#support)
+- [License](#license)
 
 ## Features
 
@@ -79,6 +112,17 @@ Visitor  (one row per browser/device, ever — durable identity)
 ```
 
 A request comes in through the `TrackVisit` middleware (or `POST /visits/collect`, or `Visits::track()`). Only the visitor token is resolved and the cookie queued synchronously — everything else (bot/geo/device detection, finding-or-creating the `Visitor`, finding-or-opening the `Session`, writing the `Event`) happens in `RecordVisitJob`, dispatched to the queue configured under `visits.queue`. A stale (past `session_timeout_minutes`) session is closed by the `visits:close-stale-sessions` command, not by the request that would otherwise start a new one.
+
+```mermaid
+flowchart LR
+    A["TrackVisit middleware /\nPOST /visits/collect /\nVisits::track()"] -->|sync| B["Resolve visitor token\n+ queue cookie"]
+    B -->|response returns here, unblocked| C(("Queue"))
+    C -->|async| D["RecordVisitJob"]
+    D --> E["bot / geo / device\ndetection"]
+    E --> F["find-or-create Visitor\nfind-or-open Session\nwrite Event"]
+```
+
+For a deeper, contributor-level look — the exact `RecordVisitJob` sequence, what differs between the three entry points, the data model, and every Support class's single responsibility — see [`docs/architecture.md`](docs/architecture.md).
 
 ## Tracking
 
@@ -191,6 +235,16 @@ Geo lookups go through `stevebauman/location` (configure its driver in your own 
 
 Device/browser/platform detection and bot classification go through `matomo/device-detector`, which compiles its rule set on first use and caches it under `visits.device_detection.cache_dir`. Bot traffic never pays for a geo lookup (checked first), and dashboard queries exclude bots by default (see `ExcludesBotsByDefault` — use `withBots()`/`onlyBots()` to opt back in on any query).
 
+Both are stored on `Visitor` **and** `Session`, but with different semantics — `Visitor`'s copy is the *last-known* value (mutable, overwritten on every new session), `Session`'s is an *immutable snapshot* of what was detected at the time that specific session started. Same core-columns-vs-JSON-bucket split as [Tracking Params](#tracking-params) above: dimension-worthy fields get a real, indexed column; everything else (inconsistent across drivers, high-cardinality, or just rarely queried) goes into a `geo_meta`/`device_meta` JSON bucket instead of a dedicated column each.
+
+**Geo — core columns:** `country_code`, `region`, `city`, `timezone`, `lat`/`lng` (unless `store_coordinates` is `false`). **`geo_meta` JSON:** `country_name`, `currency_code`, `region_code`, `zip_code`/`postal_code`, `metro_code`, `area_code`, `driver` (which `stevebauman/location` driver produced this result) — populated inconsistently depending on the active driver (e.g. `IpApi` sets `zip_code`+`currency_code`, MaxMind sets `postal_code`+`metro_code` instead), which is exactly why none of these are dedicated columns.
+
+**Device/browser — core columns:** `device_type` (desktop/smartphone/tablet/...), `client_type` (browser/mobile app/library/feed reader/PIM/media player — orthogonal to `is_bot`; matomo classifies plenty of that traffic as non-bot), `platform` (OS name), `browser`, `is_bot`. **`device_meta` JSON:** `device_family` (brand, e.g. Apple/Samsung), `device_model`, `platform_version` (OS version), `browser_version`, `browser_engine` — real detail matomo/device-detector exposes, but never filtered/grouped by (e.g. exact browser build numbers), so not worth a dedicated column each.
+
+**Bot detail (`bot_name`, `bot_category` — e.g. `Googlebot` / "Search bot") lives only on `Event`, not `Visitor`/`Session`** — those two only carry the boolean `is_bot`, since a visitor's bot status can't meaningfully change mid-identity the way a specific hit's bot name can.
+
+**Also captured per request, not geo/device but alongside them:** `locale` (from `Accept-Language`, matched against your app's configured locales) and `browser_language` (the raw, unmatched header value) — same core-column, `Visitor`-mutable/`Session`-immutable split as everything above. All of this — geo, device, locale — is also what [`GET /visits/whoami`](#whoami-endpoint) returns as a live, read-only snapshot for the current request, useful for eyeballing exactly what the package sees for a given browser/IP without writing anything to the database.
+
 ### Using the MaxMind driver
 
 `stevebauman/location`'s default drivers call an external HTTP API per lookup. For a self-hosted, no-outbound-request alternative, switch to its local MaxMind (GeoLite2) driver:
@@ -300,8 +354,6 @@ Every internal relation and write path resolves models through `Fomvasss\Visits\
 Optionally pass `?ip=1.2.3.4` to look up geo for a different IP (device/locale/tracking params still reflect the real request — there's nothing meaningful to simulate for someone else's device).
 
 ## Dashboard
-
-![Dashboard](art/dashboard.gif)
 
 A built-in web UI, enabled by default at `/visits` (`visits.dashboard.*` config for path/middleware/pagination). **No auth is applied by default** — add your own (`auth`, `can:...`) via `visits.dashboard.middleware` before deploying anywhere but local.
 
@@ -421,6 +473,20 @@ The full annotated config file is at [`config/visits.php`](config/visits.php) �
 | `whoami` | Path/middleware for the public whoami endpoint. |
 | `tenant_resolver` | Reserved for host use — the package itself never reads or scopes by it. |
 | `user_display_resolver` | Class implementing `UserDisplayNameResolverInterface`, resolves a display name for the polymorphic `user` relation on the dashboard. |
+
+## When to Use This (vs GA4, Plausible, Matomo)
+
+This isn't a GA4 replacement, and comparing feature counts against it would be dishonest — GA4 is free at any scale, has global real-time infrastructure, ML-driven predictions, and deep Google Ads integration that a small self-hosted package has no business claiming to match. Reach for this package when you specifically want tracking that lives *inside* your own app, not next to it:
+
+| | This package | GA4 | Plausible/Fathom | Matomo (self-hosted) |
+|---|---|---|---|---|
+| Data location | Your own DB | Google's servers | Vendor's servers (hosted) | Your own DB |
+| Attach events to your own models (`Order`, `Lead`, ...) via a real Eloquent relation | Yes (`eventable`) | No — separate system, joined manually | No | No (separate system) |
+| Query visits with the rest of your app's data (one JOIN, no export/ETL) | Yes | No | No | No |
+| Cost at high volume | Free (your own infra) | Free | Paid per pageview tier | Free (your own infra) |
+| Real-time global scale, ML/predictions, ad-platform sync | No | Yes | No | Partial |
+
+In practice: if the question is "which `Order` rows came from a Facebook ad campaign, joined against my own `orders` table" — that's this package's actual reason to exist. If the question is "how is our traffic trending against industry benchmarks, at Google's scale, with zero infrastructure to run" — that's GA4, and this package doesn't try to compete with it there. Nothing stops running both side by side; they answer different questions.
 
 ## Security Considerations
 
