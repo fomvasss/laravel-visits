@@ -7,6 +7,8 @@ namespace Fomvasss\Visits\Tests\Feature;
 use Fomvasss\Visits\Facades\Visits;
 use Fomvasss\Visits\Jobs\RecordVisitJob;
 use Fomvasss\Visits\Models\Event;
+use Fomvasss\Visits\Models\Session;
+use Fomvasss\Visits\Models\Visitor;
 use Fomvasss\Visits\Tests\Fixtures\TestOrder;
 use Fomvasss\Visits\Tests\TestCase;
 use Illuminate\Http\Request;
@@ -70,6 +72,58 @@ class VisitsManagerTest extends TestCase
 
         Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->name === 'newsletter.subscribed'
             && $job->payload->eventableType === null);
+    }
+
+    public function test_track_inherits_visitor_from_a_prior_eventable_event_when_request_has_no_identity(): void
+    {
+        Queue::fake();
+
+        $order = TestOrder::create(['title' => 'Order #1']);
+        $visitor = Visitor::factory()->create();
+        $session = Session::factory()->create(['visitor_id' => $visitor->id]);
+        Event::factory()->create([
+            'session_id' => $session->id, 'visitor_id' => $visitor->id,
+            'type' => Event::TYPE_ACTION, 'name' => 'order.placed',
+            'eventable_type' => TestOrder::class, 'eventable_id' => $order->id,
+        ]);
+
+        Visits::track('order.paid', $order, ['amount' => 42.5], inheritFrom: 'order.placed');
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->token === $visitor->token);
+    }
+
+    public function test_track_prefers_request_identity_over_inherit_from(): void
+    {
+        Queue::fake();
+
+        $order = TestOrder::create(['title' => 'Order #1']);
+        $otherVisitor = Visitor::factory()->create();
+        $session = Session::factory()->create(['visitor_id' => $otherVisitor->id]);
+        Event::factory()->create([
+            'session_id' => $session->id, 'visitor_id' => $otherVisitor->id,
+            'type' => Event::TYPE_ACTION, 'name' => 'order.placed',
+            'eventable_type' => TestOrder::class, 'eventable_id' => $order->id,
+        ]);
+
+        $cookieToken = str_repeat('c', 40);
+        $request = Request::create('https://example.test/paid', 'POST');
+        $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
+        $this->app->instance(Request::class, $request);
+
+        Visits::track('order.paid', $order, ['amount' => 42.5], inheritFrom: 'order.placed');
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->token === $cookieToken);
+    }
+
+    public function test_track_generates_fresh_token_when_inherit_from_has_no_matching_event(): void
+    {
+        Queue::fake();
+
+        $order = TestOrder::create(['title' => 'Order #1']);
+
+        Visits::track('order.paid', $order, ['amount' => 42.5], inheritFrom: 'order.placed');
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => is_string($job->payload->token) && strlen($job->payload->token) === 40);
     }
 
     public function test_whoami_uses_the_current_request_by_default(): void

@@ -160,6 +160,36 @@ Visits::track('order.placed', $order, ['amount' => $order->total, 'currency' => 
 
 This goes through the same async pipeline as page views, attaches to whichever `Session` is currently open for the resolved visitor token, and fires [`VisitRecorded`](#events) (and [`ConversionRecorded`](#events) when an `$eventable` is passed).
 
+#### Example: page visit → order placed → payment confirmed
+
+A typical e-commerce funnel, spanning three different request contexts:
+
+```php
+// 1. Product/catalog page — nothing to write, TrackVisit handles it automatically
+//    (assuming auto_track is on and the route isn't in exclude_paths).
+
+// 2. Checkout submitted — a real browser request, so the current cookie/header
+//    already resolves the right visitor. No special handling needed.
+Visits::track('order.placed', $order, ['amount' => $order->total]);
+
+// 3. Payment gateway webhook, minutes/hours/days later — a server-to-server
+//    call with no cookie, no header: nothing here identifies the customer.
+//    inheritFrom looks up the visitor from the 'order.placed' event already
+//    recorded on this same $order (via HasVisits — see below), instead of
+//    misattributing this event to a brand-new "visitor" (the payment gateway).
+Visits::track('order.paid', $order, ['amount' => $order->total], inheritFrom: 'order.placed');
+```
+
+`inheritFrom` only kicks in when the current request carries **no** identity signal of its own (no header, no cookie) — a live browser request (e.g. a "thank you" redirect page after payment) is still trusted over inherited history, since that's a real, current visitor. If `$order` has no `'order.placed'` event to inherit from (the feature was added after this order was placed, for example), it falls back to generating a fresh token, same as any other never-seen visitor — not an error.
+
+**JS variant of step 3**, if the payment gateway redirects the browser back to a "thank you" page instead of (or alongside) a server-to-server webhook — that page is a real, live visit, so it already carries the visitor's own cookie/`localStorage` token; no `inheritFrom` needed at all:
+
+```js
+Visits.track('order.paid', { order_id: {{ $order->id }}, amount: {{ $order->total }} });
+```
+
+Two things this loses compared to the server-side call above: it can't attach `eventable` (`POST /visits/collect` has no such field — pass whatever identifies the order into `meta` instead, as shown), and it depends on the browser actually reaching that page (closed tab, blocked script, abandoned redirect all mean it never fires). Treat it as a redundant/earlier signal, not a replacement for the webhook — the webhook is what a payment gateway guarantees will fire; the browser redirect isn't guaranteed at all.
+
 ### JS beacon
 
 For SPA route changes and client-side custom events the server-side middleware can't see. No build step — include it directly, or via `vendor:publish --tag=visits-assets`:
@@ -210,14 +240,45 @@ class Order extends Model
 }
 
 $order->visitEvents; // every Event tied to this model via eventable
-$order->latestVisitEvent('order.shipped'); // latest Event with this name, or null
+$order->latestVisitEvent('order.shipped')->first(); // latest Event with this name, or null
 ```
+
+#### Reading data back from an eventable model (e.g. `Order`)
+
+Each `Event` carries its own `visitor`/`session`, so you can go from a business record straight to *how* and *from where* it happened, not just *that* it happened:
+
+```php
+$event = $order->latestVisitEvent('order.placed')->first();
+
+$event->meta;                 // ['amount' => 100, 'currency' => 'USD'] — whatever you passed to Visits::track()
+$event->visitor;              // Visitor — the durable identity, across every session they've ever had
+$event->session;              // Session — specifically the browsing session this order happened in
+$event->session->utm_source;  // attribution for THIS order specifically (last-touch on Session)
+$event->session->country_code; // geo at the moment of this order
+$event->session->device_type;  // device used to place it
+
+// Every stage of this order's funnel, if you track more than one name against it
+$order->visitEvents()->pluck('name', 'created_at'); // e.g. ['order.placed' => ..., 'order.paid' => ..., 'order.shipped' => ...]
+$order->latestVisitEvent('order.paid')->first();
+```
+
+#### Reading data back from your auth model (e.g. `User`)
 
 On a `User` model (or whatever your auth model is), the same trait also exposes:
 
 ```php
 $user->visitorProfiles; // every Visitor ever linked to this user across all their devices/browsers
+
+$user->visitorProfiles->count();                    // how many distinct devices/browsers they've used while logged in
+$user->visitorProfiles->sortByDesc('last_seen_at')->first(); // their most recently active device
+$user->visitorProfiles->pluck('utm_source', 'id');  // first-touch acquisition channel per device
+
+// every Event across every device this user has ever used, e.g. all their conversions
+$user->visitorProfiles->flatMap->events;
+$user->visitorProfiles->flatMap->events->where('type', \Fomvasss\Visits\Models\Event::TYPE_ACTION);
 ```
+
+A `Visitor` only links to a `User` from the moment they logged in on that device (see [`VisitorIdentified`](#events), fired on Laravel's own `Login` event) — anonymous browsing before that first login on a given device is still there on the `Visitor`/`Session` rows, just not reachable through `$user->visitorProfiles` until the link exists.
 
 ## Tracking Params
 

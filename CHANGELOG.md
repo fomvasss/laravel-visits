@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-26
+
+### Added
+- `Visits::track()`/`VisitsManager::track()` gained an `?string $inheritFrom` parameter — when the current request carries no identity signal of its own (no header, no cookie; typically a payment-gateway webhook), the visitor is inherited from `$eventable`'s own prior event with that name instead of misattributing to a brand-new visitor. Never overrides a real request-derived identity.
+- `TokenResolver::resolve()` gained an optional `?callable $fallback` third parameter (consulted only when header/input and cookie both come up empty), which `inheritFrom` above is built on
+- README/README.uk: worked examples for reading package data back through `HasVisits` — `visitor`/`session`/attribution/geo/device off an eventable model's own events (`Order`), and cross-device aggregates off the auth model (`User`'s `visitorProfiles`)
+- README/README.uk: JS-beacon variant of the "order paid" step in the funnel example (a payment-gateway "thank you" redirect page instead of a server-to-server webhook), with the `eventable`/reliability trade-offs spelled out
+
+### Fixed
+- README/README.uk's `latestVisitEvent()` example was missing `->first()` — the method returns a `MorphOne` relation (query builder), not the `Event` model directly
+
 ## [0.4.0] - 2026-07-26
 
 ### Added

@@ -104,6 +104,45 @@ class TokenResolverTest extends TestCase
         $this->assertNotSame('bad token with spaces', $token);
     }
 
+    public function test_fallback_is_used_when_no_client_token_or_cookie(): void
+    {
+        $fallbackToken = str_repeat('f', 40);
+        $request = Request::create('/', 'POST');
+
+        $this->assertSame($fallbackToken, $this->resolver->resolve($request, fn () => $fallbackToken));
+    }
+
+    public function test_fallback_is_never_consulted_when_a_cookie_is_present(): void
+    {
+        $cookieToken = str_repeat('c', 40);
+        $request = Request::create('/', 'GET');
+        $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
+
+        $token = $this->resolver->resolve($request, function () {
+            $this->fail('fallback should not be consulted when the cookie already resolves a token');
+        });
+
+        $this->assertSame($cookieToken, $token);
+    }
+
+    public function test_malformed_fallback_falls_back_to_generated(): void
+    {
+        $request = Request::create('/', 'POST');
+
+        $token = $this->resolver->resolve($request, fn () => 'not-a-valid-token!!');
+
+        $this->assertTrue($this->resolver->isValidFormat($token));
+    }
+
+    public function test_null_fallback_result_generates_a_fresh_token(): void
+    {
+        $request = Request::create('/', 'POST');
+
+        $token = $this->resolver->resolve($request, fn () => null);
+
+        $this->assertTrue($this->resolver->isValidFormat($token));
+    }
+
     public function test_format_regex_is_configurable(): void
     {
         $uuid = '550e8400-e29b-41d4-a716-446655440000';

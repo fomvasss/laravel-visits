@@ -12,14 +12,22 @@ use Illuminate\Support\Str;
  * trio from the legacy dropshop/greespi implementations with a single mechanism.
  *
  * Precedence: client-supplied token (header/body — SPA localStorage, native/mobile clients
- * where cookies are unreliable) > cookie (plain browser) > freshly generated.
+ * where cookies are unreliable) > cookie (plain browser) > $fallback, if given > freshly
+ * generated.
  */
 class TokenResolver
 {
     public const HEADER = 'X-Visitor-Id';
     public const INPUT_KEY = 'visitor_id';
 
-    public function resolve(Request $request): string
+    /**
+     * @param  (callable(): ?string)|null  $fallback  consulted only when the request itself
+     *   carries no identity signal at all (no header/input, no cookie) — e.g.
+     *   VisitsManager::track()'s `inheritFrom`, resolving a prior event's visitor for a
+     *   server-to-server call (a payment webhook) that has no browser identity of its own.
+     *   Never overrides an actual request-derived token.
+     */
+    public function resolve(Request $request, ?callable $fallback = null): string
     {
         $clientToken = $request->header(self::HEADER) ?: $request->input(self::INPUT_KEY);
 
@@ -31,6 +39,14 @@ class TokenResolver
 
         if (is_string($cookieToken) && $this->isValidFormat($cookieToken)) {
             return $cookieToken;
+        }
+
+        if ($fallback) {
+            $inherited = $fallback();
+
+            if (is_string($inherited) && $this->isValidFormat($inherited)) {
+                return $inherited;
+            }
         }
 
         return $this->generate();

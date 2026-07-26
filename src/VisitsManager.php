@@ -31,13 +31,28 @@ class VisitsManager
     ) {
     }
 
-    public function track(string $name, ?Model $eventable = null, ?array $meta = null): void
+    /**
+     * @param  string|null  $inheritFrom  event name to inherit the visitor from when this
+     *   request carries no identity signal of its own (no header/cookie) — typically a
+     *   server-to-server call (a payment webhook) with no browser identity to resolve.
+     *   Looks up $eventable->latestVisitEvent($inheritFrom)->first()->visitor, so $eventable must use
+     *   HasVisits and already have a tracked event with that name. Ignored (and never needed)
+     *   when the request already carries a real identity signal — a live browser request is
+     *   always trusted over inherited history.
+     */
+    public function track(string $name, ?Model $eventable = null, ?array $meta = null, ?string $inheritFrom = null): void
     {
         if (! config('visits.enabled', true)) {
             return;
         }
 
-        $token = $this->tokenResolver->resolve($this->request);
+        $token = $this->tokenResolver->resolve($this->request, function () use ($eventable, $inheritFrom) {
+            if (! $inheritFrom || ! $eventable || ! method_exists($eventable, 'latestVisitEvent')) {
+                return null;
+            }
+
+            return $eventable->latestVisitEvent($inheritFrom)->first()?->visitor?->token;
+        });
 
         // the calling route may not have gone through TrackVisit (e.g. a POST-only checkout
         // route, which the middleware never tracks) — queue the cookie here too so a
