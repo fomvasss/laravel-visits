@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-26
+
+### Added
+- `visits.page_views` (default `'every'`) — set to `'first_only'` so `TrackVisit` only writes an `Event` row for a visitor's very first hit (no visits cookie on the request yet); every later page view still resolves/refreshes the `Visitor`/`Session` (cookie renewal, geo/device snapshot, session timeout) but skips the `Event` row. Generalizes the custom "track only brand-new visitors" middleware pattern hosts kept hand-rolling into a config toggle. `TokenResolver::hasRequestIdentity()` (new, public) backs the "is this a returning visitor" check.
+- Session detail page (`/visits/sessions/{id}`)'s events table is now sortable (Time/Type/Name columns, same `sortable-th` pattern as the Sessions/Visitors lists). Defaults to chronological ascending (oldest first) — unlike every other sortable table on the dashboard (which default to newest-first), this table is one session's own journey read top-to-bottom like a timeline, not an activity feed. `DashboardController::resolveSort()` gained an optional `$defaultDirection` parameter (`'desc'` unless overridden) to support this without changing the Sessions/Visitors lists' existing default.
+
 ## [0.7.0] - 2026-07-26
 
 ### Fixed

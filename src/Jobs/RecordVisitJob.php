@@ -56,20 +56,25 @@ class RecordVisitJob implements ShouldQueue
         $visitor = $this->resolveVisitor($device, $geo);
         $session = $this->resolveSession($visitor, $device, $geo);
 
-        $event = $this->createEvent($visitor, $session, $device);
+        // `page_views: first_only` (TrackVisit) still needs the visitor/session identity
+        // resolved and refreshed above — cookie, geo/device snapshot, session timeout — just
+        // without an Event row for every single subsequent hit of an already-known visitor.
+        if ($this->payload->recordEvent) {
+            $event = $this->createEvent($visitor, $session, $device);
 
-        if ($this->payload->type === Event::TYPE_PAGE_VIEW) {
-            $session->increment('page_views_count');
+            if ($this->payload->type === Event::TYPE_PAGE_VIEW) {
+                $session->increment('page_views_count');
+            }
+
+            VisitRecorded::dispatch($event);
+
+            if ($this->payload->type === Event::TYPE_ACTION && $this->payload->eventableType) {
+                ConversionRecorded::dispatch($event);
+            }
         }
 
         $session->update(['last_activity_at' => now()]);
         $visitor->update(['last_seen_at' => now()]);
-
-        VisitRecorded::dispatch($event);
-
-        if ($this->payload->type === Event::TYPE_ACTION && $this->payload->eventableType) {
-            ConversionRecorded::dispatch($event);
-        }
     }
 
     private function isOverBudget(): bool

@@ -31,6 +31,7 @@ class TrackVisit
             return $next($request);
         }
 
+        $isReturningVisitor = $this->tokenResolver->hasRequestIdentity($request);
         $token = $this->tokenResolver->resolve($request);
 
         Cookie::queue(
@@ -39,7 +40,9 @@ class TrackVisit
             (int) config('visits.cookie.ttl_minutes'),
         );
 
-        $payload = $this->payloadBuilder->build($request, $token, Event::TYPE_PAGE_VIEW);
+        $recordEvent = ! ($isReturningVisitor && config('visits.page_views', 'every') === 'first_only');
+
+        $payload = $this->payloadBuilder->build($request, $token, Event::TYPE_PAGE_VIEW, recordEvent: $recordEvent);
 
         RecordVisitJob::dispatch($payload)
             ->onConnection(config('visits.queue.connection'))

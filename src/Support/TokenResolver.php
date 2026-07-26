@@ -78,6 +78,26 @@ class TokenResolver
         return $user->visitorProfiles()->latest('last_seen_at')->value('token');
     }
 
+    /**
+     * Whether the request itself already carries a returning-visitor signal (header/input
+     * token, or the durable cookie) — distinct from resolve()'s full precedence chain, which
+     * also considers $fallback and the authenticated user's own history. Used by TrackVisit's
+     * `page_views: first_only` mode to tell a brand-new visitor's first hit apart from a
+     * returning one, without generating or persisting anything.
+     */
+    public function hasRequestIdentity(Request $request): bool
+    {
+        $clientToken = $request->header(self::HEADER) ?: $request->input(self::INPUT_KEY);
+
+        if (is_string($clientToken) && $this->isValidFormat($clientToken)) {
+            return true;
+        }
+
+        $cookieToken = $request->cookie((string) config('visits.cookie.name'));
+
+        return is_string($cookieToken) && $this->isValidFormat($cookieToken);
+    }
+
     public function generate(): string
     {
         return Str::random(40);

@@ -550,6 +550,46 @@ class DashboardControllerTest extends TestCase
         $this->get(route('visits.show', $session->id))->assertOk();
     }
 
+    public function test_show_events_default_to_chronological_ascending(): void
+    {
+        $session = Session::factory()->create();
+        $newer = Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $session->visitor_id, 'created_at' => now()]);
+        $older = Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $session->visitor_id, 'created_at' => now()->subHour()]);
+
+        $response = $this->get(route('visits.show', $session->id));
+
+        $response->assertOk();
+        $response->assertViewHas('sort', 'created_at');
+        $response->assertViewHas('direction', 'asc');
+        $response->assertViewHas('session', fn ($s) => $s->events->first()->id === $older->id
+            && $s->events->last()->id === $newer->id);
+    }
+
+    public function test_show_events_can_sort_by_type(): void
+    {
+        $session = Session::factory()->create();
+        Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $session->visitor_id, 'type' => Event::TYPE_PAGE_VIEW]);
+        Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $session->visitor_id, 'type' => Event::TYPE_ACTION]);
+
+        $response = $this->get(route('visits.show', [$session->id, 'sort' => 'type', 'direction' => 'asc']));
+
+        $response->assertOk();
+        $response->assertViewHas('session', fn ($s) => $s->events->first()->type === Event::TYPE_ACTION);
+    }
+
+    public function test_show_events_can_sort_descending_when_requested(): void
+    {
+        $session = Session::factory()->create();
+        $newer = Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $session->visitor_id, 'created_at' => now()]);
+        $older = Event::factory()->create(['session_id' => $session->id, 'visitor_id' => $session->visitor_id, 'created_at' => now()->subHour()]);
+
+        $response = $this->get(route('visits.show', [$session->id, 'sort' => 'created_at', 'direction' => 'desc']));
+
+        $response->assertOk();
+        $response->assertViewHas('session', fn ($s) => $s->events->first()->id === $newer->id
+            && $s->events->last()->id === $older->id);
+    }
+
     public function test_visitor_page_links_coordinates_to_a_map_when_present(): void
     {
         $visitor = Visitor::factory()->create(['lat' => '50.4501', 'lng' => '30.5234']);

@@ -149,6 +149,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Page View Recording
+    |--------------------------------------------------------------------------
+    |
+    | 'every' (default) — TrackVisit writes an Event row for every tracked page view, on
+    |   every request.
+    | 'first_only' — TrackVisit only writes an Event for a visitor's very first-ever hit (no
+    |   visits cookie on the request yet); every later page view still resolves/refreshes the
+    |   Visitor and Session (cookie, geo/device snapshot, session timeout) but skips the Event
+    |   row. For a host that only cares about attribution (referrer/UTM/geo/device, captured
+    |   once) plus explicit Visits::track() calls (login, purchase, ...), not a full page-view
+    |   trail — the same effect as a custom "first visit" middleware, without writing one.
+    |   Session.page_views_count stays 0/1 in this mode; the dashboard's Top Pages/Live feed
+    |   will be correspondingly sparse — expected, not a bug.
+    |
+    */
+
+    'page_views' => 'every',
+
+    /*
+    |--------------------------------------------------------------------------
     | Excluded IPs
     |--------------------------------------------------------------------------
     |

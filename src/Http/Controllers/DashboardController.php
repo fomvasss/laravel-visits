@@ -377,23 +377,31 @@ class DashboardController extends Controller
      * @param  string[]  $sortable  whitelist — column names come straight from the query string
      * @return array{0: string, 1: string}
      */
-    private function resolveSort(Request $request, array $sortable, string $default): array
+    private function resolveSort(Request $request, array $sortable, string $default, string $defaultDirection = 'desc'): array
     {
         $sort = in_array($request->input('sort'), $sortable, true) ? $request->input('sort') : $default;
-        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $direction = $request->has('direction')
+            ? ($request->input('direction') === 'asc' ? 'asc' : 'desc')
+            : $defaultDirection;
 
         return [$sort, $direction];
     }
 
-    public function show(int $id): View
+    public function show(Request $request, int $id): View
     {
         $sessionClass = ModelResolver::session();
 
+        // Default direction is 'asc' (chronological), not the 'desc' every other sortable table
+        // on this dashboard uses — this table is one session's own journey (page 1 → action →
+        // page 2), read top-to-bottom like a timeline, not an activity feed to scan for
+        // freshness.
+        [$sort, $direction] = $this->resolveSort($request, ['created_at', 'type', 'name'], 'created_at', 'asc');
+
         $session = $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
-            ->with(['visitor', 'user', 'events' => fn ($q) => $q->withBots()->oldest('created_at')])
+            ->with(['visitor', 'user', 'events' => fn ($q) => $q->withBots()->orderBy($sort, $direction)])
             ->findOrFail($id);
 
-        return view('visits::dashboard.show', compact('session'));
+        return view('visits::dashboard.show', compact('session', 'sort', 'direction'));
     }
 
     public function showVisitor(int $id): View

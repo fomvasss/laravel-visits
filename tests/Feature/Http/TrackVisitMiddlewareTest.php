@@ -152,4 +152,51 @@ class TrackVisitMiddlewareTest extends TestCase
 
         Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->token === $token);
     }
+
+    public function test_page_views_every_records_event_even_with_an_existing_cookie(): void
+    {
+        Queue::fake();
+
+        $this->withCookie((string) config('visits.cookie.name'), str_repeat('z', 40))
+            ->get('/test-page')
+            ->assertOk();
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->recordEvent === true);
+    }
+
+    public function test_page_views_first_only_records_event_on_a_brand_new_visitor(): void
+    {
+        Queue::fake();
+        config(['visits.page_views' => 'first_only']);
+
+        $this->get('/test-page')->assertOk();
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->recordEvent === true);
+    }
+
+    public function test_page_views_first_only_skips_event_for_a_returning_visitor(): void
+    {
+        Queue::fake();
+        config(['visits.page_views' => 'first_only']);
+
+        $this->withCookie((string) config('visits.cookie.name'), str_repeat('z', 40))
+            ->get('/test-page')
+            ->assertOk();
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->recordEvent === false);
+    }
+
+    public function test_page_views_first_only_still_dispatches_the_job_for_a_returning_visitor(): void
+    {
+        Queue::fake();
+        config(['visits.page_views' => 'first_only']);
+
+        $this->withCookie((string) config('visits.cookie.name'), str_repeat('z', 40))
+            ->get('/test-page')
+            ->assertOk();
+
+        // Session/Visitor freshness (last_activity_at/last_seen_at, cookie renewal) still needs
+        // the job to run — only the Event row is skipped, not the whole dispatch.
+        Queue::assertPushed(RecordVisitJob::class);
+    }
 }

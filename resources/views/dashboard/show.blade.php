@@ -83,9 +83,9 @@
         <table class="w-full text-xs">
             <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                 <tr>
-                    <th class="text-left px-3 py-2">Time</th>
-                    <th class="text-left px-3 py-2">Type</th>
-                    <th class="text-left px-3 py-2">Name</th>
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'created_at', 'label' => 'Time'])
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'type', 'label' => 'Type'])
+                    @include('visits::dashboard.partials.sortable-th', ['column' => 'name', 'label' => 'Name'])
                     <th class="text-left px-3 py-2">URL</th>
                     <th class="text-left px-3 py-2">Route</th>
                     <th class="text-left px-3 py-2">Eventable</th>

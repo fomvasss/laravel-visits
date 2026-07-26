@@ -51,16 +51,20 @@ flowchart TD
     Geo --> RV
     RV -->|new| VC["VisitorCreated event"]
     RV --> RS["resolveSession()"]
-    RS -->|reused, still open\nwithin session_timeout_minutes| CE
+    RS -->|reused, still open\nwithin session_timeout_minutes| RecCheck
     RS -->|new| SS["SessionStarted event"]
-    SS --> CE["createEvent()"]
+    SS --> RecCheck
     VC --> RS
-    CE --> Counters["increment page_views_count\n(page_view only), touch\nlast_activity_at/last_seen_at"]
+    RecCheck{"payload.recordEvent?\n(false only when\npage_views=first_only and\nthe visitor already had a\ncookie — TrackVisit)"}
+    RecCheck -->|no| Touch
+    RecCheck -->|yes| CE["createEvent()"]
+    CE --> Counters["increment page_views_count\n(page_view only)"]
     Counters --> VR["VisitRecorded event"]
     VR --> Conv{"type=action\n+ eventable?"}
     Conv -->|yes| CR["ConversionRecorded event"]
-    Conv -->|no| End(["done"])
-    CR --> End
+    Conv -->|no| Touch
+    CR --> Touch
+    Touch["touch last_activity_at/last_seen_at"] --> End(["done"])
 ```
 
 Notes that don't fit in the diagram:
@@ -68,6 +72,7 @@ Notes that don't fit in the diagram:
 - **Order is deliberate**: excluded-IP check first (cheapest, most decisive — an office/internal IP is rejected before anything else runs), bot detection before geo (so bot traffic never pays for a geo lookup), rate budget checked before the expensive writes.
 - **`resolveVisitor()`** does a `firstOrNew(['token' => ...])`. Geo/device/locale fields are always overwritten (last-known, mutable). First-touch fields (`first_landing_url`, UTM, `ref`, `search_term`, `extra_params`) are only filled when the row didn't already exist — never overwritten after.
 - **`resolveSession()`** reuses an open session (`ended_at IS NULL`, active within `session_timeout_minutes`) if one exists for the visitor; otherwise opens a new one. UTM/`ref`/`search_term`/`extra_params` on a *new* session are last-touch: the current request's values if present, otherwise inherited from the `Visitor`'s own first-touch values. `is_bot` is sticky per session — once true, a later non-bot-looking request in the same session never flips it back.
+- **`payload.recordEvent`** (only `TrackVisit` ever sets it `false`, via `visits.page_views = 'first_only'`) skips `createEvent()` and the counters/`VisitRecorded`/`ConversionRecorded` that follow it — but `resolveVisitor()`/`resolveSession()` and the final `last_activity_at`/`last_seen_at` touch still run unconditionally, so identity/session freshness never depends on whether this request's page view actually gets an `Event` row.
 - **Both `Visitor` and `Session` writes bypass `WithoutBotsScope`** (`withoutGlobalScope`) — bot traffic must still be *findable* to attach it to the right row; only dashboard/reporting queries exclude bots by default.
 - Queries in `RecordVisitJob` are the only place that resolves models through `ModelResolver` for **writes**; everything downstream (dashboard, `HasVisits`) reads through the same resolver so a model override is honored everywhere.
 
@@ -89,7 +94,7 @@ erDiagram
 
 | Class | Single responsibility |
 |---|---|
-| `TokenResolver` | Visitor identity: client header/body → cookie → generate. Format gated by `visits.visitor_id.format_regex`. |
+| `TokenResolver` | Visitor identity: client header/input → cookie → `$fallback` (e.g. `inheritFrom`) → authenticated user's own known `Visitor` → generate. Format gated by `visits.visitor_id.format_regex`. `hasRequestIdentity()` (header/input/cookie only, no fallback/auth-inherit) backs `TrackVisit`'s `page_views: first_only`. |
 | `PayloadBuilder` | Assembles a `VisitPayload` DTO from a `Request` — the one place shared by all three entry points. |
 | `IpExcluder` | Literal IP / CIDR (IPv4+IPv6) match against `visits.exclude_ips`. |
 | `DeviceResolver` | `matomo/device-detector` — device/browser/OS + bot name/category in one pass. |

@@ -147,6 +147,8 @@ Route::middleware(['web', 'track-visits'])->group(function () {
 
 `visits.exclude_ips` (literal IPs and/or CIDR ranges — an internal/office network, for example) is checked centrally in `RecordVisitJob` instead, so it applies to every entry point uniformly — the automatic middleware, `POST /visits/collect`, and server-side `Visits::track()` calls alike.
 
+Set `visits.page_views` to `'first_only'` if you only care about attribution (referrer/UTM/geo/device, captured once) plus your own explicit `Visits::track()` calls (login, purchase, ...) — not a full page-view trail. `TrackVisit` still runs on every request (cookie renewal, `Session`/`Visitor` freshness), it just skips writing an `Event` row once the visitor already has the cookie. The effect is the same as bolting on a custom "only track brand-new visitors" middleware, without writing one. `Session.page_views_count` stays at 0 or 1 in this mode, and the dashboard's Top Pages/Live feed will be correspondingly sparse — expected, not a bug.
+
 ### Custom actions (server-side)
 
 ```php
@@ -434,7 +436,7 @@ A built-in web UI, enabled by default at `/visits` (`visits.dashboard.*` config 
 
 - **Overview** (`/visits`) — an "online now" indicator, totals + trend sparklines for visitors/sessions/page views/conversions over a date range, breakdown panels (UTM source, referrer host, country, device, client type — or by conversion name), a top-pages panel, a bot-traffic summary, and a session-locations map (Leaflet, marker clustering, fullscreen toggle).
 - **Campaigns** (`/visits/campaigns`) — the same date-range/breakdown mechanism, but every UTM/`ref` dimension at once, for drilling into campaign attribution specifically.
-- **Sessions** (`/visits/sessions`) — sortable, filterable (date range, country, device, UTM source, IP) paginated list; links through to per-session detail (`/visits/sessions/{id}`) with its full event timeline.
+- **Sessions** (`/visits/sessions`) — sortable, filterable (date range, country, device, UTM source, IP) paginated list; links through to per-session detail (`/visits/sessions/{id}`) with its full, sortable event timeline (defaults to chronological — a session's own journey, not an activity feed).
 - **Visitors** (`/visits/visitors`) — same idea, one row per `Visitor`, with a "returning only" filter and session count; links through to per-visitor detail (`/visits/visitors/{id}`).
 - **Live** (`/visits/live`) — recent events as fading pulse markers on a world map, plus a scrolling log table underneath (linking back to each session's detail page). Not true real time — events go through a queue before landing here, so a pulse reflects "recently processed", not the instant it happened. See [Live Activity Page](#live-activity-page) below for the polling vs. SSE choice.
 - **Whoami** (`/visits/me`) — the dashboard's own view of the [Whoami](#whoami-endpoint) data, with a form to look up a different IP.
@@ -532,6 +534,7 @@ The full annotated config file is at [`config/visits.php`](config/visits.php) �
 | `session_timeout_minutes` | Inactivity window before `visits:close-stale-sessions` closes a session. |
 | `auto_track` | `false` switches `TrackVisit` from global-with-denylist to manual-attach-only (see [Automatic page views](#automatic-page-views)). |
 | `exclude_paths` | Paths the tracking middleware never tracks (denylist, only relevant when `auto_track` is `true`). |
+| `page_views` | `'first_only'` skips the `Event` row for a returning visitor's page views — `Session`/`Visitor` still refresh normally (see [Automatic page views](#automatic-page-views)). |
 | `exclude_ips` | Literal IPs and/or CIDR ranges never tracked, regardless of entry point. |
 | `tracking_params` | UTM/`ref` core columns, ad-click-ID `extra_keys`, optional `extra_pattern` regex. |
 | `search_engines` | Host → query-param map for organic search keyword extraction from referrers (`Visitor`/`Session.search_term`). |

@@ -30,6 +30,7 @@ class PayloadBuilder
         ?Model $eventable = null,
         ?array $meta = null,
         ?string $url = null,
+        bool $recordEvent = true,
     ): VisitPayload {
         $locale = $this->localeResolver->resolve($request);
         $authUser = $request->user();
@@ -59,6 +60,7 @@ class PayloadBuilder
             eventableType: $eventable ? $eventable::class : null,
             eventableId: $eventable?->getKey(),
             meta: $meta,
+            recordEvent: $recordEvent,
         );
     }
 }

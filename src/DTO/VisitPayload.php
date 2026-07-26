@@ -29,6 +29,7 @@ readonly class VisitPayload
         public ?string $eventableType,
         public int|string|null $eventableId,
         public ?array $meta,
+        public bool $recordEvent = true,
     ) {
     }
 }
