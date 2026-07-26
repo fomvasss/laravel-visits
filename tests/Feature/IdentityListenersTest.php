@@ -57,6 +57,30 @@ class IdentityListenersTest extends TestCase
         $this->assertSame((string) $user->id, $session->user_id);
     }
 
+    /**
+     * A host that registers Relation::morphMap() (a common Laravel convention) makes
+     * getMorphClass() return the alias, not the FQCN — HasVisits::visitorProfiles() (morphMany)
+     * filters by that same alias when reading, so writing the raw FQCN here would silently
+     * never match, even though the row is otherwise linked correctly.
+     */
+    public function test_login_uses_the_morph_map_alias_when_registered(): void
+    {
+        \Illuminate\Database\Eloquent\Relations\Relation::morphMap(['app_user' => TestUser::class]);
+
+        try {
+            $visitor = Visitor::factory()->create(['token' => self::TOKEN, 'user_type' => null, 'user_id' => null]);
+
+            $this->bindRequestWithVisitorCookie();
+            $user = $this->user();
+
+            event(new Login('web', $user, false));
+
+            $this->assertSame('app_user', $visitor->refresh()->user_type);
+        } finally {
+            \Illuminate\Database\Eloquent\Relations\Relation::morphMap([], false);
+        }
+    }
+
     public function test_login_does_not_overwrite_a_session_already_attributed(): void
     {
         $visitor = Visitor::factory()->create(['token' => self::TOKEN, 'user_type' => null, 'user_id' => null]);

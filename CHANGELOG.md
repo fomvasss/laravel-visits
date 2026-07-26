@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-26
+
+### Fixed
+- `PayloadBuilder`/`VisitorIdentityMerger` wrote `user_type`/`eventable_type` as the raw `::class` FQCN. Any host that registers `Relation::morphMap()` (a common Laravel convention) makes `getMorphClass()` return the registered alias instead — and `HasVisits::visitorProfiles()`/`visitEvents()` (both `morphMany()`) filter by the *current* model's own `getMorphClass()` when reading. Result: on such a host, every `Visitor`/`Event` was written with the FQCN but read back by alias — zero matches, even though the row was otherwise linked correctly, with no error to signal it. Now uses `getMorphClass()` (falls back to the FQCN automatically when no morphMap entry exists, so hosts without a morphMap see no behavior change).
+
 ## [0.8.0] - 2026-07-26
 
 ### Added

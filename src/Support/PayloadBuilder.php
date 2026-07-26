@@ -55,9 +55,12 @@ class PayloadBuilder
             extraParams: $this->paramsExtractor->extractExtra($request),
             locale: $locale['locale'],
             browserLanguage: $locale['browser_language'],
-            authUserType: $authUser ? $authUser::class : null,
+            // getMorphClass() (not ::class) — respects the host's Relation::morphMap() alias
+            // when registered, so HasVisits::visitorProfiles()/visitEvents() (which resolve the
+            // *current* model's own getMorphClass() to filter) actually match what gets written.
+            authUserType: $authUser instanceof Model ? $authUser->getMorphClass() : ($authUser ? $authUser::class : null),
             authUserId: $authUser?->getAuthIdentifier(),
-            eventableType: $eventable ? $eventable::class : null,
+            eventableType: $eventable?->getMorphClass(),
             eventableId: $eventable?->getKey(),
             meta: $meta,
             recordEvent: $recordEvent,

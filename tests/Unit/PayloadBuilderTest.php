@@ -12,6 +12,7 @@ use Fomvasss\Visits\Support\TrackingParamsExtractor;
 use Fomvasss\Visits\Tests\Fixtures\TestOrder;
 use Fomvasss\Visits\Tests\Fixtures\TestUser;
 use Fomvasss\Visits\Tests\TestCase;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 
@@ -99,6 +100,32 @@ class PayloadBuilderTest extends TestCase
         $this->assertSame(42, $payload->authUserId);
     }
 
+    /**
+     * A host that registers Relation::morphMap() (a common Laravel convention) makes
+     * getMorphClass() return the alias, not the FQCN — HasVisits::visitorProfiles() (morphMany)
+     * filters by that same alias when reading, so writing the raw FQCN here would silently
+     * never match, even though the row is otherwise linked correctly.
+     */
+    public function test_captures_authenticated_user_morph_alias_when_morph_map_registered(): void
+    {
+        Relation::morphMap(['app_user' => TestUser::class]);
+
+        try {
+            $user = new TestUser(['id' => 42]);
+            $user->exists = true;
+            $user->id = 42;
+
+            $request = Request::create('/');
+            $request->setUserResolver(fn () => $user);
+
+            $payload = $this->builder()->build($request, 'tok123', Event::TYPE_PAGE_VIEW);
+
+            $this->assertSame('app_user', $payload->authUserType);
+        } finally {
+            Relation::morphMap([], false);
+        }
+    }
+
     public function test_captures_eventable_model_and_meta_for_actions(): void
     {
         $order = new TestOrder(['id' => 7]);
@@ -120,5 +147,30 @@ class PayloadBuilderTest extends TestCase
         $this->assertSame(TestOrder::class, $payload->eventableType);
         $this->assertSame(7, $payload->eventableId);
         $this->assertSame(['amount' => 99.5], $payload->meta);
+    }
+
+    public function test_captures_eventable_morph_alias_when_morph_map_registered(): void
+    {
+        Relation::morphMap(['order' => TestOrder::class]);
+
+        try {
+            $order = new TestOrder(['id' => 7]);
+            $order->exists = true;
+            $order->id = 7;
+
+            $request = Request::create('/');
+
+            $payload = $this->builder()->build(
+                $request,
+                'tok123',
+                Event::TYPE_ACTION,
+                name: 'order.placed',
+                eventable: $order,
+            );
+
+            $this->assertSame('order', $payload->eventableType);
+        } finally {
+            Relation::morphMap([], false);
+        }
     }
 }
