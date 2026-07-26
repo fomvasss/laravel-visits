@@ -16,8 +16,8 @@ use Illuminate\Support\Str;
  */
 class TokenResolver
 {
-    public const HEADER = 'X-Visitor-Token';
-    public const INPUT_KEY = 'visitor_token';
+    public const HEADER = 'X-Visitor-Id';
+    public const INPUT_KEY = 'visitor_id';
 
     public function resolve(Request $request): string
     {
@@ -43,6 +43,6 @@ class TokenResolver
 
     public function isValidFormat(string $token): bool
     {
-        return (bool) preg_match('/^[a-zA-Z0-9]{20,64}$/', $token);
+        return (bool) preg_match((string) config('visits.visitor_id.format_regex'), $token);
     }
 }

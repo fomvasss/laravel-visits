@@ -154,26 +154,48 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('onlineNow', 1);
     }
 
-    public function test_index_top_pages_ranks_page_views_by_url(): void
+    public function test_index_top_pages_ranks_page_views_by_path(): void
     {
         Carbon::setTestNow('2026-03-10 12:00:00');
         $session = Session::factory()->create(['started_at' => now()]);
 
         Event::factory()->count(3)->create([
             'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
-            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/popular', 'created_at' => now(),
+            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/popular', 'path' => '/popular', 'created_at' => now(),
         ]);
         Event::factory()->create([
             'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
-            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/rare', 'created_at' => now(),
+            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/rare', 'path' => '/rare', 'created_at' => now(),
         ]);
 
         $response = $this->get(route('visits.index'));
 
         $response->assertOk();
         $response->assertViewHas('topPages', fn ($pages) => $pages->count() === 2
-            && $pages->first()['url'] === 'https://example.test/popular'
+            && $pages->first()['path'] === '/popular'
             && $pages->first()['count'] === 3);
+    }
+
+    public function test_index_top_pages_groups_different_query_strings_under_the_same_path(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+        $session = Session::factory()->create(['started_at' => now()]);
+
+        Event::factory()->create([
+            'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
+            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/catalog?sort=price', 'path' => '/catalog', 'created_at' => now(),
+        ]);
+        Event::factory()->create([
+            'session_id' => $session->id, 'visitor_id' => $session->visitor_id,
+            'type' => Event::TYPE_PAGE_VIEW, 'url' => 'https://example.test/catalog?color=red', 'path' => '/catalog', 'created_at' => now(),
+        ]);
+
+        $response = $this->get(route('visits.index'));
+
+        $response->assertOk();
+        $response->assertViewHas('topPages', fn ($pages) => $pages->count() === 1
+            && $pages->first()['path'] === '/catalog'
+            && $pages->first()['count'] === 2);
     }
 
     public function test_index_top_pages_excludes_actions_and_bots(): void

@@ -89,7 +89,7 @@ class VisitsServiceProvider extends ServiceProvider
         $router = $this->app['router'];
         $router->aliasMiddleware('track-visits', TrackVisit::class);
 
-        if (! config('visits.enabled', true)) {
+        if (! config('visits.enabled', true) || ! config('visits.auto_track', true)) {
             return;
         }
 

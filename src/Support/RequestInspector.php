@@ -42,7 +42,7 @@ class RequestInspector
             'ip' => $ip,
             // read-only — the client-supplied header/cookie value as-is, never generated,
             // since nothing here gets persisted for it to be an identity for
-            'visitor_token' => $this->currentToken($request),
+            'visitor_id' => $this->currentToken($request),
             'user_agent' => $userAgent,
             'bot' => [
                 'is_bot' => $device['is_bot'],

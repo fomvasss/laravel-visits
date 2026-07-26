@@ -31,7 +31,7 @@
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Request</div>
             <dl class="text-xs space-y-1.5">
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">IP</dt><dd class="font-mono">{{ $data['ip'] }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Visitor token</dt><dd class="font-mono">{{ $data['visitor_token'] ?? '—' }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Visitor ID</dt><dd class="font-mono">{{ $data['visitor_id'] ?? '—' }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Referrer</dt><dd>{{ $data['referrer'] ?? '—' }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Locale</dt><dd>{{ $data['locale']['locale'] }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Browser language</dt><dd>{{ $data['locale']['browser_language'] ?? '—' }}</dd></div>

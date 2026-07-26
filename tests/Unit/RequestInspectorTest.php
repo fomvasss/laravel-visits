@@ -65,17 +65,17 @@ class RequestInspectorTest extends TestCase
         $this->assertNull($data['geo']);
     }
 
-    public function test_visitor_token_is_null_when_nothing_supplied(): void
+    public function test_visitor_id_is_null_when_nothing_supplied(): void
     {
         Location::fake([]);
         $request = Request::create('/');
 
         $data = $this->inspector()->inspect($request);
 
-        $this->assertNull($data['visitor_token']);
+        $this->assertNull($data['visitor_id']);
     }
 
-    public function test_visitor_token_reflects_the_cookie_as_is_without_generating_one(): void
+    public function test_visitor_id_reflects_the_cookie_as_is_without_generating_one(): void
     {
         Location::fake([]);
         $request = Request::create('/');
@@ -83,10 +83,10 @@ class RequestInspectorTest extends TestCase
 
         $data = $this->inspector()->inspect($request);
 
-        $this->assertSame('not-a-valid-format-but-shown-anyway', $data['visitor_token']);
+        $this->assertSame('not-a-valid-format-but-shown-anyway', $data['visitor_id']);
     }
 
-    public function test_visitor_token_prefers_client_header_over_cookie(): void
+    public function test_visitor_id_prefers_client_header_over_cookie(): void
     {
         Location::fake([]);
         $request = Request::create('/');
@@ -95,7 +95,7 @@ class RequestInspectorTest extends TestCase
 
         $data = $this->inspector()->inspect($request);
 
-        $this->assertSame('header-token', $data['visitor_token']);
+        $this->assertSame('header-token', $data['visitor_id']);
     }
 
     public function test_ip_override_changes_geo_and_reported_ip_but_not_device(): void

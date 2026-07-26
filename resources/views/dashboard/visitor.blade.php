@@ -9,7 +9,7 @@
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Visitor</div>
             <dl class="text-xs space-y-1.5">
-                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Token</dt><dd class="font-mono">{{ $visitor->token }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Visitor ID</dt><dd class="font-mono">{{ $visitor->token }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">First seen</dt><dd>{{ $visitor->first_seen_at }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Last seen</dt><dd>{{ $visitor->last_seen_at }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500 dark:text-gray-400">Sessions</dt><dd><a href="{{ route('visits.sessions', ['visitor_id' => $visitor->id, 'with_bots' => $visitor->is_bot ? 1 : null]) }}" class="text-blue-600 dark:text-blue-400">{{ $visitor->sessions->count() }}</a></dd></div>

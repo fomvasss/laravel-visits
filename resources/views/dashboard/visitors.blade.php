@@ -15,7 +15,7 @@
                    class="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded px-2 py-1">
         </div>
         <div>
-            <label class="block text-gray-500 dark:text-gray-400 mb-1">Token</label>
+            <label class="block text-gray-500 dark:text-gray-400 mb-1">Visitor ID</label>
             <input type="text" name="token" value="{{ request('token') }}"
                    class="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded px-2 py-1 font-mono">
         </div>
@@ -50,7 +50,7 @@
         <table class="w-full text-xs">
             <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                 <tr>
-                    <th class="text-left px-3 py-2">Token</th>
+                    <th class="text-left px-3 py-2">Visitor ID</th>
                     @include('visits::dashboard.partials.sortable-th', ['column' => 'first_seen_at', 'label' => 'First seen'])
                     @include('visits::dashboard.partials.sortable-th', ['column' => 'last_seen_at', 'label' => 'Last seen'])
                     @include('visits::dashboard.partials.sortable-th', ['column' => 'sessions_count', 'label' => 'Sessions', 'align' => 'right'])

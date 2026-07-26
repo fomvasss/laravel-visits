@@ -92,6 +92,14 @@ Which mechanism to use depends on what kind of app is on the other end:
 
 Any `GET` request through the `web` middleware group is tracked automatically, except paths matching `visits.exclude_paths` (admin/debugbar/horizon/health-check paths are excluded by default) — and the package's own dashboard/whoami paths, which are always excluded regardless of `exclude_paths` (otherwise browsing `/visits` would itself generate page-view rows about viewing the dashboard).
 
+Set `visits.auto_track` to `false` to flip this from a denylist to an allowlist: `TrackVisit` is no longer pushed onto the `web` group automatically, and `exclude_paths` no longer applies (nothing to exclude from). It's still registered under the `track-visits` alias, so attach it to only the routes you actually want tracked:
+
+```php
+Route::middleware(['web', 'track-visits'])->group(function () {
+    // only these routes generate page views
+});
+```
+
 `visits.exclude_ips` (literal IPs and/or CIDR ranges — an internal/office network, for example) is checked centrally in `RecordVisitJob` instead, so it applies to every entry point uniformly — the automatic middleware, `POST /visits/collect`, and server-side `Visits::track()` calls alike.
 
 ### Custom actions (server-side)
@@ -124,7 +132,7 @@ Visits.trackPageView(); // call manually on SPA route changes if autoTrackPageVi
 Visits.track('newsletter.subscribed', { plan: 'pro' });
 ```
 
-The beacon persists `visitor_token` in `localStorage` (falling back silently if unavailable) and sends it as `X-Visitor-Token`, which takes priority over the cookie server-side — this is what makes it work across origins where cookies aren't reliable.
+The beacon persists `visitor_id` in `localStorage` (falling back silently if unavailable) and sends it as `X-Visitor-Id`, which takes priority over the cookie server-side — this is what makes it work across origins where cookies aren't reliable.
 
 If you'd rather queue calls the way GTM's `dataLayer` works (e.g. loading `visits.js` with `async`, or firing events from an inline `<script>` earlier in `<head>` before the beacon has necessarily run yet), push array-form calls to `window.VisitsQueue` instead — safe before *or* after the script has loaded:
 
@@ -143,7 +151,7 @@ The beacon is optional — `POST /visits/collect` is a plain JSON endpoint, call
 
 ### Identity resolution
 
-Precedence when resolving the visitor's token on each request: client-supplied token (`X-Visitor-Token` header or `visitor_token` input) → existing cookie → freshly generated. The cookie (`visits.cookie.name`, 2-year TTL by default) is (re-)queued on every tracked request regardless of which path resolved the token.
+Precedence when resolving the visitor's token on each request: client-supplied token (`X-Visitor-Id` header or `visitor_id` input) → existing cookie → freshly generated. The cookie (`visits.cookie.name`, 2-year TTL by default) is (re-)queued on every tracked request regardless of which path resolved the token.
 
 ### Attaching visits to your own models
 
@@ -276,7 +284,7 @@ Every internal relation and write path resolves models through `Fomvasss\Visits\
 ```json
 {
   "ip": "203.0.113.4",
-  "visitor_token": "…",
+  "visitor_id": "…",
   "user_agent": "…",
   "bot": { "is_bot": false, "bot_name": null, "bot_category": null },
   "device": { "device_type": "desktop", "platform": "Windows", "browser": "Chrome", "client_type": "browser", "...": "..." },
@@ -392,9 +400,11 @@ The full annotated config file is at [`config/visits.php`](config/visits.php) �
 | `models` | Override `Visitor`/`Session`/`Event`/`StatDaily` with your own subclasses. |
 | `queue` | Connection/queue name `RecordVisitJob` dispatches to. |
 | `cookie` | Visitor identity cookie name/TTL. |
+| `visitor_id.format_regex` | Format accepted from a client-supplied `X-Visitor-Id`/`visitor_id`. |
 | `reset_identity_on_logout` | Clear `Visitor.user_id` on logout (shared/kiosk devices). |
 | `session_timeout_minutes` | Inactivity window before `visits:close-stale-sessions` closes a session. |
-| `exclude_paths` | Paths the tracking middleware never tracks. |
+| `auto_track` | `false` switches `TrackVisit` from global-with-denylist to manual-attach-only (see [Automatic page views](#automatic-page-views)). |
+| `exclude_paths` | Paths the tracking middleware never tracks (denylist, only relevant when `auto_track` is `true`). |
 | `exclude_ips` | Literal IPs and/or CIDR ranges never tracked, regardless of entry point. |
 | `tracking_params` | UTM/`ref` core columns, ad-click-ID `extra_keys`, optional `extra_pattern` regex. |
 | `search_engines` | Host → query-param map for organic search keyword extraction from referrers (`Visitor`/`Session.search_term`). |
@@ -416,7 +426,7 @@ The full annotated config file is at [`config/visits.php`](config/visits.php) �
 
 Some of these are inherent to any client-side analytics beacon (the same is true of GA4's own collect endpoint), not unique to this package — listed here so they're a deliberate, informed choice rather than a surprise.
 
-- **`visitor_token` is a bearer token, not a signed credential.** `X-Visitor-Token`/`visitor_token` is only checked for format (`TokenResolver::isValidFormat()`), never authenticity. Anyone who obtains someone else's token (XSS, leaked referrer/logs) can write events attributed to that identity. Impact is limited to spoofing the *anonymous tracking* identity — `Visitor.user_id` is set from Laravel's own `Login` event, not from this token, so this can't be used to impersonate an authenticated account.
+- **`visitor_id` is a bearer token, not a signed credential.** `X-Visitor-Id`/`visitor_id` is only checked for format (`TokenResolver::isValidFormat()`), never authenticity. Anyone who obtains someone else's token (XSS, leaked referrer/logs) can write events attributed to that identity. Impact is limited to spoofing the *anonymous tracking* identity — `Visitor.user_id` is set from Laravel's own `Login` event, not from this token, so this can't be used to impersonate an authenticated account.
 - **The cookie is `httpOnly`; the `localStorage` copy isn't.** Laravel's `Cookie::queue()` defaults to `httpOnly`, so the cookie itself resists casual XSS reads — but `visits.js` deliberately persists the same token in `localStorage` (readable by any JS on the page), since that's what makes cross-origin/SPA use possible at all. An XSS anywhere on the page can read it either way.
 - **Client-supplied data isn't verified.** `POST /visits/collect` (and anything reaching `Visits::track()` from client input) accepts whatever `type`/`name`/`meta`/`url` a caller sends — nothing confirms a reported page view or conversion actually happened. `rate_limit.endpoint`/`visitor_budget` bound volume, not authenticity. `collect.allowed_origins` (see [`docs/client-integration.md`](docs/client-integration.md)) filters requests by `Origin`/`Referer`, but both are attacker-controlled — treat it as a filter for casual misuse, not authentication.
 - **No idempotency key on custom actions.** A client-side retry (e.g. a mobile app's own network retry logic) can double-record the same conversion. Add your own idempotency check in `meta` if a specific action must never be double-counted.

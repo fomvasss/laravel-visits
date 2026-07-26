@@ -268,6 +268,7 @@ class RecordVisitJob implements ShouldQueue
             'type' => $this->payload->type,
             'name' => $this->payload->name,
             'url' => $this->payload->url,
+            'path' => $this->payload->url ? parse_url($this->payload->url, PHP_URL_PATH) : null,
             'route_name' => $this->payload->routeName,
             'is_bot' => $device['is_bot'],
             'bot_name' => $device['bot_name'],

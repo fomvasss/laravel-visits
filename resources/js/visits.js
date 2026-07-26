@@ -12,15 +12,15 @@
  *   window.VisitsQueue.push(['trackPageView']);
  *   window.VisitsQueue.push(['track', 'newsletter.subscribed', { plan: 'pro' }]);
  *
- * Token handling: visitor_token is read from localStorage first (client-controlled — the
+ * Token handling: visitor_id is read from localStorage first (client-controlled — the
  * reason this exists at all is cross-origin/cookie-unreliable setups), sent as
- * X-Visitor-Token so it takes priority over any cookie on the server side. The server's JSON
- * response always includes visitor_token, which is what gets persisted here.
+ * X-Visitor-Id so it takes priority over any cookie on the server side. The server's JSON
+ * response always includes visitor_id, which is what gets persisted here.
  */
 (function (window, document) {
     'use strict';
 
-    var STORAGE_KEY = 'visits_token';
+    var STORAGE_KEY = 'visits_visitor_id';
     var config = window.VisitsConfig || {};
     var endpoint = config.endpoint || '/visits/collect';
 
@@ -55,7 +55,7 @@
         var csrf = csrfToken();
 
         if (token) {
-            headers['X-Visitor-Token'] = token;
+            headers['X-Visitor-Id'] = token;
         }
 
         if (csrf) {
@@ -73,8 +73,8 @@
                 return res.ok ? res.json() : null;
             })
             .then(function (data) {
-                if (data && data.visitor_token) {
-                    setToken(data.visitor_token);
+                if (data && data.visitor_id) {
+                    setToken(data.visitor_id);
                 }
 
                 return data;

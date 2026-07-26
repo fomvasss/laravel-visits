@@ -91,6 +91,26 @@ class RecordVisitJobTest extends TestCase
         $this->assertSame($visitor->id, $event->visitor_id);
     }
 
+    public function test_event_path_strips_the_query_string_from_url(): void
+    {
+        $this->fakeGeo();
+        RecordVisitJob::dispatchSync($this->payload([
+            'url' => 'https://example.test/catalog?sort=price&color=red',
+        ]));
+
+        $this->assertSame('/catalog', Event::first()->path);
+    }
+
+    public function test_event_path_is_null_when_url_is_null(): void
+    {
+        $this->fakeGeo();
+        RecordVisitJob::dispatchSync($this->payload([
+            'url' => null,
+        ]));
+
+        $this->assertNull(Event::first()->path);
+    }
+
     public function test_excluded_ip_records_nothing(): void
     {
         $this->fakeGeo();

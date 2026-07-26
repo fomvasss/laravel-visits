@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `docs/client-integration.md`: handing off an already-existing identifier from another system (a separate landing page, a legacy tracker's `anon_id`) to become the same `Visitor` from the first hit on the main site — via `?visitor_id=...` on the handoff link, or a shared cookie on a common registrable domain
+- `visits.visitor_id.format_regex` — the accepted client-supplied identifier format is now configurable (previously hardcoded to `^[a-zA-Z0-9]{20,64}$`), so identifiers like UUIDs from another system can be accepted without normalizing them first
+- `visits.auto_track` (default `true`) — set to `false` to stop `TrackVisit` from auto-attaching to the global `web` middleware group (denylist via `exclude_paths`) and instead attach the `track-visits` alias to only the specific routes you want tracked (allowlist)
+- `Event.path` — the `url` column's path component only (no query string), computed once at write time
+- `docs/client-integration.md`: full-page HTTP caching (nginx `fastcgi_cache`/`proxy_cache`) — why `TrackVisit` undercounts on cache HITs, the cached-`Set-Cookie` identity-leak risk, using the JS beacon for cached routes instead, and the cached-CSRF-meta-tag failure mode
+
+### Changed
+- **Breaking:** the client-facing visitor identifier is renamed from "token" to "id" throughout, to stop implying an auth/security artifact for what is an unauthenticated, spoofable, attribution-only value — `X-Visitor-Token` header → `X-Visitor-Id`, `visitor_token` input/JSON key → `visitor_id`, `visits_token` cookie name → `visits_visitor_id`. Update any client code that reads/sends the old names.
+- Overview's "Top Pages" panel now groups by `Event.path` instead of the raw `url` — a page with filter/sort query-string params (e.g. a product catalog) previously fragmented into one row per parameter combination; now it counts as one page. Events recorded before this change have `path = null` and are excluded from the panel (not backfilled).
+
 ## [0.3.0] - 2026-07-26
 
 ### Added

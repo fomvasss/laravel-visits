@@ -21,7 +21,7 @@ class WhoAmIControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonStructure([
-            'ip', 'visitor_token', 'user_agent', 'bot', 'device', 'geo', 'locale', 'referrer', 'tracking_params',
+            'ip', 'visitor_id', 'user_agent', 'bot', 'device', 'geo', 'locale', 'referrer', 'tracking_params',
         ]);
     }
 
@@ -51,10 +51,10 @@ class WhoAmIControllerTest extends TestCase
         Location::fake([]);
         $token = str_repeat('a', 40);
 
-        $response = $this->getJson(route('visits.whoami'), ['X-Visitor-Token' => $token]);
+        $response = $this->getJson(route('visits.whoami'), ['X-Visitor-Id' => $token]);
 
         $response->assertOk();
-        $response->assertJson(['visitor_token' => $token]);
+        $response->assertJson(['visitor_id' => $token]);
         $this->assertSame(0, Visitor::withBots()->where('token', $token)->count());
     }
 

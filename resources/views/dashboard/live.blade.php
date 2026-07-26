@@ -13,7 +13,8 @@
     </div>
 
     <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <div class="flex justify-end mb-3">
+        <div class="flex items-center justify-between mb-3">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400">Live events (fading pulses, ~3s)</div>
             <button id="visits-live-map-fullscreen" type="button"
                     class="text-xs px-3 py-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 Fullscreen

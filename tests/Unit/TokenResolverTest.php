@@ -103,4 +103,16 @@ class TokenResolverTest extends TestCase
         $this->assertTrue($this->resolver->isValidFormat($token));
         $this->assertNotSame('bad token with spaces', $token);
     }
+
+    public function test_format_regex_is_configurable(): void
+    {
+        $uuid = '550e8400-e29b-41d4-a716-446655440000';
+
+        $this->assertFalse($this->resolver->isValidFormat($uuid));
+
+        config(['visits.visitor_id.format_regex' => '/^[a-f0-9-]{36}$/']);
+
+        $this->assertTrue($this->resolver->isValidFormat($uuid));
+        $this->assertFalse($this->resolver->isValidFormat(str_repeat('a', 40)));
+    }
 }

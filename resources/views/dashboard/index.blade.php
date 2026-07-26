@@ -80,7 +80,7 @@
             <div class="text-xs">
                 @foreach($topPages as $page)
                     <div class="flex justify-between gap-4 py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                        <span class="text-gray-700 dark:text-gray-300 truncate" title="{{ $page['url'] }}">{{ $page['url'] }}</span>
+                        <span class="text-gray-700 dark:text-gray-300 truncate" title="{{ $page['path'] }}">{{ $page['path'] }}</span>
                         <span class="text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ number_format($page['count']) }}</span>
                     </div>
                 @endforeach

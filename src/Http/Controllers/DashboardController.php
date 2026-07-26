@@ -239,19 +239,22 @@ class DashboardController extends Controller
             ->values();
 
         // most-visited pages — like the map/bot summary above, not worth a visit_stats_daily
-        // dimension: url is unbounded cardinality, a daily rollup row per unique URL would
+        // dimension: path is unbounded cardinality, a daily rollup row per unique path would
         // dwarf every other dimension combined. Read raw events directly instead, capped.
+        // Grouped by path (query string stripped, computed once at write time), not raw url —
+        // otherwise a single catalog page with filter/sort params fragments into one row per
+        // parameter combination instead of counting as one page.
         $eventClass = ModelResolver::event();
         $topPages = $eventClass::query()
             ->where('type', Event::TYPE_PAGE_VIEW)
-            ->whereNotNull('url')
+            ->whereNotNull('path')
             ->whereBetween('created_at', [$from, $rangeEnd])
-            ->select(['url', DB::raw('count(*) as cnt')])
-            ->groupBy('url')
+            ->select(['path', DB::raw('count(*) as cnt')])
+            ->groupBy('path')
             ->orderByDesc('cnt')
             ->limit((int) config('visits.dashboard.top_pages_limit', 10))
             ->get()
-            ->map(fn ($row) => ['url' => $row->url, 'count' => (int) $row->cnt])
+            ->map(fn ($row) => ['path' => $row->path, 'count' => (int) $row->cnt])
             ->values();
 
         return view('visits::dashboard.index', compact(

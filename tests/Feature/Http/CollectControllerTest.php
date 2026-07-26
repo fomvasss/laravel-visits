@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Queue;
 
 class CollectControllerTest extends TestCase
 {
-    public function test_page_view_is_accepted_and_returns_visitor_token(): void
+    public function test_page_view_is_accepted_and_returns_visitor_id(): void
     {
         Queue::fake();
 
@@ -20,8 +20,8 @@ class CollectControllerTest extends TestCase
         ]);
 
         $response->assertOk();
-        $response->assertJsonStructure(['visitor_token']);
-        $this->assertNotEmpty($response->json('visitor_token'));
+        $response->assertJsonStructure(['visitor_id']);
+        $this->assertNotEmpty($response->json('visitor_id'));
 
         Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->type === Event::TYPE_PAGE_VIEW
             && $job->payload->url === 'https://spa.example.test/dashboard');
@@ -70,7 +70,7 @@ class CollectControllerTest extends TestCase
         $response = $this->postJson('/visits/collect', []);
 
         $response->assertOk();
-        $response->assertJson(['visitor_token' => null]);
+        $response->assertJson(['visitor_id' => null]);
         Queue::assertNotPushed(RecordVisitJob::class);
     }
 
@@ -79,10 +79,10 @@ class CollectControllerTest extends TestCase
         Queue::fake();
         $token = str_repeat('x', 40);
 
-        $response = $this->postJson('/visits/collect', [], ['X-Visitor-Token' => $token]);
+        $response = $this->postJson('/visits/collect', [], ['X-Visitor-Id' => $token]);
 
         $response->assertOk();
-        $response->assertJson(['visitor_token' => $token]);
+        $response->assertJson(['visitor_id' => $token]);
     }
 
     public function test_allows_any_origin_when_allowed_origins_is_not_set(): void
@@ -103,7 +103,7 @@ class CollectControllerTest extends TestCase
         $response = $this->postJson('/visits/collect', [], ['Origin' => 'https://untrusted.example.test']);
 
         $response->assertStatus(403);
-        $response->assertJson(['visitor_token' => null]);
+        $response->assertJson(['visitor_id' => null]);
         Queue::assertNotPushed(RecordVisitJob::class);
     }
 

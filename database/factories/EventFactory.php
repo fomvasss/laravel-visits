@@ -19,6 +19,8 @@ class EventFactory extends Factory
     public function definition(): array
     {
         $isAction = fake()->boolean(15);
+        $path = '/' . fake()->randomElement(['', 'pricing', 'blog/post-1', 'features', 'contact', 'cart']);
+        $url = 'https://example.test' . $path;
 
         return [
             // standalone defaults — the seed command overrides both to chain onto an
@@ -27,7 +29,8 @@ class EventFactory extends Factory
             'visitor_id' => Visitor::factory(),
             'type' => $isAction ? Event::TYPE_ACTION : Event::TYPE_PAGE_VIEW,
             'name' => $isAction ? fake()->randomElement(['lead.created', 'order.placed', 'newsletter.subscribed', 'demo.requested']) : null,
-            'url' => 'https://example.test/' . fake()->randomElement(['', 'pricing', 'blog/post-1', 'features', 'contact', 'cart']),
+            'url' => $url,
+            'path' => $path,
             'is_bot' => false,
             'bot_name' => null,
             'bot_category' => null,

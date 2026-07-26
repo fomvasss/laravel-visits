@@ -65,8 +65,27 @@ return [
     */
 
     'cookie' => [
-        'name' => 'visits_token',
+        'name' => 'visits_visitor_id',
         'ttl_minutes' => 60 * 24 * 365 * 2, // 2 years
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Client-Supplied Visitor ID
+    |--------------------------------------------------------------------------
+    |
+    | Format accepted from the X-Visitor-Id header / visitor_id input
+    | (query string, POST body, or JSON) when a client hands the package an
+    | already-existing identifier instead of letting it generate one — e.g.
+    | a landing page's own anon_id passed via ?visitor_id=... on the link
+    | to the main site. Kept deliberately restrictive by default: the value
+    | ends up in a DB column, a cookie value and a URL, so the pattern also
+    | guards against unbounded/unsafe values, not just style.
+    |
+    */
+
+    'visitor_id' => [
+        'format_regex' => '/^[a-zA-Z0-9]{20,64}$/',
     ],
 
     /*
@@ -96,11 +115,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Auto-Attach TrackVisit
+    |--------------------------------------------------------------------------
+    |
+    | If true (default), TrackVisit is pushed onto the global 'web' middleware
+    | group automatically — every GET request is tracked except exclude_paths
+    | below (denylist). Set to false to track only specific routes instead
+    | (allowlist): the middleware is still registered under the 'track-visits'
+    | alias, so attach it yourself where wanted —
+    | Route::middleware(['web', 'track-visits'])->group(...) — and exclude_paths
+    | no longer applies (nothing to exclude from, since nothing is global).
+    |
+    */
+
+    'auto_track' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Excluded Paths
     |--------------------------------------------------------------------------
     |
-    | Routes the TrackVisit middleware never tracks (path patterns, same
-    | syntax as Route::is()).
+    | Only relevant when auto_track is true. Routes the TrackVisit middleware
+    | never tracks (path patterns, same syntax as Route::is()).
     |
     */
 
@@ -166,7 +202,7 @@ return [
             'twclid',    // Twitter / X Ads
             'li_fat_id', // LinkedIn Ads
         ],
-        'extra_pattern' => null,
+        'extra_pattern' => null, // e.g. '/^aff_/' — captures aff_id, aff_sub, ...
     ],
 
     /*
@@ -257,7 +293,7 @@ return [
     |   case: a Blade/session app where the beacon runs same-origin. For an
     |   API-only backend or a decoupled SPA/mobile client on a different
     |   origin, swap this to something without CSRF/session (e.g. ['api']) —
-    |   the token flow (X-Visitor-Token header in, visitor_token in the JSON
+    |   the token flow (X-Visitor-Id header in, visitor_id in the JSON
     |   body out) already works without cookies; only the 'web' group's CSRF
     |   check gets in the way. The throttle from rate_limit.endpoint above is
     |   appended automatically, no need to repeat it here.
@@ -374,7 +410,7 @@ return [
         'map_tile_url' => env('VISITS_DASHBOARD_MAP_TILE_URL', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
         // Max markers rendered — capped so a busy site doesn't try to plot thousands at once.
         'map_marker_limit' => env('VISITS_DASHBOARD_MAP_MARKER_LIMIT', 300),
-        // Overview's "Top Pages" panel — how many of the most-visited URLs to show.
+        // Overview's "Top Pages" panel — how many of the most-visited paths to show.
         'top_pages_limit' => env('VISITS_DASHBOARD_TOP_PAGES_LIMIT', 10),
         // Overview's "online now" count — a session counts as online if still open
         // (ended_at is null) and active within this many minutes.
