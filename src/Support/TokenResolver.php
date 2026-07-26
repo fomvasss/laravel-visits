@@ -12,8 +12,8 @@ use Illuminate\Support\Str;
  * trio from the legacy dropshop/greespi implementations with a single mechanism.
  *
  * Precedence: client-supplied token (header/body — SPA localStorage, native/mobile clients
- * where cookies are unreliable) > cookie (plain browser) > $fallback, if given > freshly
- * generated.
+ * where cookies are unreliable) > cookie (plain browser) > $fallback, if given > the
+ * authenticated request's own known Visitor, if any > freshly generated.
  */
 class TokenResolver
 {
@@ -49,7 +49,33 @@ class TokenResolver
             }
         }
 
+        $authInherited = $this->inheritFromAuthenticatedUser($request);
+
+        if (is_string($authInherited) && $this->isValidFormat($authInherited)) {
+            return $authInherited;
+        }
+
         return $this->generate();
+    }
+
+    /**
+     * Last resort before generating a brand-new identity. A Bearer-token API (Sanctum
+     * personal access tokens, most mobile/SPA backends without CORS credentials) never gets
+     * the visits cookie back on a cross-origin request — without this, every tracked action
+     * from an already-known, authenticated user (login, purchase, ...) would otherwise
+     * fragment into its own disconnected anonymous Visitor. Reuses their own most recently
+     * active one instead, via HasVisits::visitorProfiles() — silently skipped if the auth
+     * model doesn't use that trait.
+     */
+    private function inheritFromAuthenticatedUser(Request $request): ?string
+    {
+        $user = $request->user();
+
+        if (! $user || ! method_exists($user, 'visitorProfiles')) {
+            return null;
+        }
+
+        return $user->visitorProfiles()->latest('last_seen_at')->value('token');
     }
 
     public function generate(): string

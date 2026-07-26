@@ -9,6 +9,8 @@ use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Support\PayloadBuilder;
 use Fomvasss\Visits\Support\RequestInspector;
 use Fomvasss\Visits\Support\TokenResolver;
+use Fomvasss\Visits\Support\VisitorIdentityMerger;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
@@ -28,6 +30,7 @@ class VisitsManager
         private readonly TokenResolver $tokenResolver,
         private readonly PayloadBuilder $payloadBuilder,
         private readonly RequestInspector $requestInspector,
+        private readonly VisitorIdentityMerger $identityMerger,
     ) {
     }
 
@@ -75,6 +78,20 @@ class VisitsManager
         RecordVisitJob::dispatch($payload)
             ->onConnection(config('visits.queue.connection'))
             ->onQueue(config('visits.queue.queue'));
+    }
+
+    /**
+     * Links the current request's Visitor to $user, the same way MergeVisitorIdentity does on
+     * Laravel's own Login event — but for identity established WITHOUT an actual login: a
+     * guest checkout that matched or created a User by email/phone, for example. Deliberately
+     * not implemented by dispatching a fake Login event — that would mislead any other Login
+     * listener (a security notification, fraud check, ...) into treating a mere form submission
+     * as an authenticated sign-in. Use the real Login event (or let it fire on its own via
+     * Auth::attempt()/Auth::login()) for actual authentication instead.
+     */
+    public function identify(Authenticatable $user): void
+    {
+        $this->identityMerger->merge($user, $this->tokenResolver->resolve($this->request));
     }
 
     /**

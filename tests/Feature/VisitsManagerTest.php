@@ -10,6 +10,7 @@ use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Models\Session;
 use Fomvasss\Visits\Models\Visitor;
 use Fomvasss\Visits\Tests\Fixtures\TestOrder;
+use Fomvasss\Visits\Tests\Fixtures\TestUser;
 use Fomvasss\Visits\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
@@ -124,6 +125,32 @@ class VisitsManagerTest extends TestCase
         Visits::track('order.paid', $order, ['amount' => 42.5], inheritFrom: 'order.placed');
 
         Queue::assertPushed(RecordVisitJob::class, fn ($job) => is_string($job->payload->token) && strlen($job->payload->token) === 40);
+    }
+
+    public function test_identify_links_the_current_visitor_to_the_given_user_without_a_login_event(): void
+    {
+        $cookieToken = str_repeat('c', 40);
+        $request = Request::create('https://example.test/checkout', 'POST');
+        $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
+        $this->app->instance(Request::class, $request);
+
+        $visitor = Visitor::factory()->create(['token' => $cookieToken, 'user_type' => null, 'user_id' => null]);
+        $user = TestUser::create(['name' => 'Guest', 'email' => 'guest@example.test']);
+
+        Visits::identify($user);
+
+        $visitor->refresh();
+        $this->assertSame(TestUser::class, $visitor->user_type);
+        $this->assertSame($user->id, $visitor->user_id);
+    }
+
+    public function test_identify_does_nothing_when_no_visitor_matches_the_current_token(): void
+    {
+        $user = TestUser::create(['name' => 'Guest', 'email' => 'guest@example.test']);
+
+        Visits::identify($user);
+
+        $this->assertSame(0, Visitor::withBots()->count());
     }
 
     public function test_whoami_uses_the_current_request_by_default(): void

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-26
+
+### Added
+- `TokenResolver::resolve()` now falls back to the authenticated request's own known `Visitor` (via `HasVisits::visitorProfiles()` on the auth model) before generating a brand-new one — no new parameter, applies automatically across all three entry points. Fixes identity fragmentation for Bearer-token APIs (Sanctum personal access tokens, `supports_credentials: false`), where the visits cookie never round-trips cross-origin: every `Visits::track()` call for an already-known, logged-in user (a purchase, a profile update, ...) previously spawned a disconnected anonymous `Visitor` instead of reconnecting to theirs. Checked after `inheritFrom` — an explicit choice still wins over this implicit one.
+- `Visits::identify($user)` — links the current request's `Visitor` to `$user`, the same merge `MergeVisitorIdentity` performs on Laravel's own `Login` event, but for identity established *without* an actual login (a guest checkout matching/creating a `User` by email or phone, for example). Deliberately not implemented as a fake `Login` dispatch — that would mislead any other `Login` listener a host app adds later into treating a form submission as an authenticated sign-in. `MergeVisitorIdentity`'s merge logic is extracted into a new `Support\VisitorIdentityMerger`, shared by both the `Login` listener and `identify()`.
+
 ## [0.5.0] - 2026-07-26
 
 ### Added

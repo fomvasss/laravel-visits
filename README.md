@@ -22,6 +22,7 @@ A self-hosted, first-party analytics platform for Laravel — not just pageview 
   - [Custom actions (server-side)](#custom-actions-server-side)
   - [JS beacon](#js-beacon)
   - [Identity resolution](#identity-resolution)
+  - [Identifying a visitor without a real login](#identifying-a-visitor-without-a-real-login)
 - [Tracking Params](#tracking-params)
 - [Geo & Device Detection](#geo--device-detection)
   - [Using the MaxMind driver](#using-the-maxmind-driver)
@@ -225,7 +226,20 @@ The beacon is optional — `POST /visits/collect` is a plain JSON endpoint, call
 
 ### Identity resolution
 
-Precedence when resolving the visitor's token on each request: client-supplied token (`X-Visitor-Id` header or `visitor_id` input) → existing cookie → freshly generated. The cookie (`visits.cookie.name`, 2-year TTL by default) is (re-)queued on every tracked request regardless of which path resolved the token.
+Precedence when resolving the visitor's token on each request: client-supplied token (`X-Visitor-Id` header or `visitor_id` input) → existing cookie → `Visits::track()`'s `inheritFrom`, if given → the authenticated request's own known `Visitor`, if any → freshly generated. The cookie (`visits.cookie.name`, 2-year TTL by default) is (re-)queued on every tracked request regardless of which path resolved the token.
+
+**The authenticated-user fallback matters for Bearer-token APIs specifically.** A cookie only round-trips when the browser is willing to send it back — same-origin always, cross-origin only with `credentials: include` *and* the API's CORS config allowing credentials (`supports_credentials: true`, a non-wildcard origin). A typical Sanctum personal-access-token API (`Authorization: Bearer ...`, no CORS credentials) never gets the visits cookie back at all — without this fallback, every server-side `Visits::track()` call for an already-known, logged-in user (a purchase, a profile update) would otherwise spawn a brand-new, disconnected anonymous `Visitor` instead of reconnecting to theirs. If your auth model uses [`HasVisits`](#attaching-visits-to-your-own-models), this happens automatically — no extra code, no new parameter. Only the very first anonymous touchpoint (before any `Visitor` is linked to that user at all) can't be reconnected this way, same as any attribution system.
+
+### Identifying a visitor without a real login
+
+`Visits::identify($user)` links the current request's `Visitor` to `$user` — the same merge `MergeVisitorIdentity` performs on Laravel's own `Login` event, but for identity established *without* an actual authentication happening. The recurring case: guest checkout, where a phone/email typed into a form matches or creates a `User` record with no password, OTP, or session involved at all.
+
+```php
+// e.g. inside a guest checkout action, right after the guest User is matched/created
+Visits::identify($user);
+```
+
+**Don't reach for this by dispatching a fake `Login` event instead** (`event(new \Illuminate\Auth\Events\Login(...))`) — it's tempting since that's exactly what `MergeVisitorIdentity` listens for, but it's misleading to any *other* `Login` listener a host app adds later (a "new sign-in" security notification, a fraud check, a failed-attempt-counter reset, ...): those would fire on a form submission that was never actually a login. `Visits::identify()` does the identical merge — same-request token resolution, `Visitor.user_id`/`user_type` update, `VisitorIdentified` dispatch, immutable `Session` snapshot if still open within `session_timeout_minutes` — without touching the `Login` event at all. Reserve dispatching `Login` itself for cases where a real authentication happened through a code path that just doesn't call `Auth::login()`/`Auth::attempt()` (a Sanctum token issued directly after verifying a password/OTP, for example) — there, it's accurate, not borrowed.
 
 ### Attaching visits to your own models
 
@@ -388,7 +402,7 @@ Every internal relation and write path resolves models through `Fomvasss\Visits\
 - **`ConversionRecorded`** — fired in addition to `VisitRecorded` when the event is a custom action tied to an eventable model (`Visits::track('order.placed', $order)`). Carries the `Event` as `$event`.
 - **`VisitorCreated`** — fired once, the first time a given visitor token is ever seen (a brand new `Visitor` row). Useful for "new unique visitor" hooks — CRM sync, first-touch attribution capture. Carries the `Visitor` as `$visitor`.
 - **`SessionStarted`** — fired when a new `Session` is opened, not on every event within an already-open one. Useful for "active sessions" counters/webhooks. Carries the `Session` as `$session`.
-- **`VisitorIdentified`** — fired when an anonymous `Visitor` is attached to a real user on `Login` (see [Identity resolution](#identity-resolution)). Useful for merging pre-signup history into a CRM contact at exactly the moment identity becomes known. Carries the `Visitor` as `$visitor`.
+- **`VisitorIdentified`** — fired when an anonymous `Visitor` is attached to a real user, on `Login` or via [`Visits::identify()`](#identifying-a-visitor-without-a-real-login). Useful for merging pre-signup history into a CRM contact at exactly the moment identity becomes known. Carries the `Visitor` as `$visitor`.
 
 `VisitorCreated`/`SessionStarted` fire regardless of bot status, same as `VisitRecorded`/`ConversionRecorded` — check `is_bot` on the carried model yourself if a listener should skip bot traffic.
 

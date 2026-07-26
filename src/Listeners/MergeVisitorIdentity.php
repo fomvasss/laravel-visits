@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Listeners;
 
-use Fomvasss\Visits\Events\VisitorIdentified;
-use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
-use Fomvasss\Visits\Support\ModelResolver;
 use Fomvasss\Visits\Support\TokenResolver;
+use Fomvasss\Visits\Support\VisitorIdentityMerger;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Http\Request;
 
@@ -19,52 +17,22 @@ use Illuminate\Http\Request;
  *
  * Synchronous and idempotent: cheap indexed updates, no queue needed. Prior anonymous
  * history becomes "the user's" automatically through visitor_id, no separate merge step.
+ *
+ * Thin wrapper around VisitorIdentityMerger — see that class for the actual merge, and for
+ * VisitsManager::identify(), the non-Login-event equivalent for identity established without
+ * an actual login (a guest checkout matching/creating a User by email or phone, for example).
  */
 class MergeVisitorIdentity
 {
     public function __construct(
         private readonly Request $request,
         private readonly TokenResolver $tokenResolver,
+        private readonly VisitorIdentityMerger $merger,
     ) {
     }
 
     public function handle(Login $event): void
     {
-        if (! config('visits.enabled', true)) {
-            return;
-        }
-
-        $token = $this->tokenResolver->resolve($this->request);
-        $visitorClass = ModelResolver::visitor();
-
-        $visitor = $visitorClass::withoutGlobalScope(WithoutBotsScope::class)
-            ->where('token', $token)
-            ->first();
-
-        if (! $visitor) {
-            return;
-        }
-
-        $visitor->update([
-            'user_type' => $event->user::class,
-            'user_id' => $event->user->getAuthIdentifier(),
-        ]);
-
-        VisitorIdentified::dispatch($visitor);
-
-        $timeoutMinutes = (int) config('visits.session_timeout_minutes', 30);
-        $sessionClass = ModelResolver::session();
-
-        $sessionClass::withoutGlobalScope(WithoutBotsScope::class)
-            ->where('visitor_id', $visitor->id)
-            ->whereNull('ended_at')
-            ->whereNull('user_id')
-            ->where('last_activity_at', '>=', now()->subMinutes($timeoutMinutes))
-            ->latest('last_activity_at')
-            ->first()
-            ?->update([
-                'user_type' => $event->user::class,
-                'user_id' => $event->user->getAuthIdentifier(),
-            ]);
+        $this->merger->merge($event->user, $this->tokenResolver->resolve($this->request));
     }
 }

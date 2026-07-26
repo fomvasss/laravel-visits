@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Tests\Unit;
 
+use Fomvasss\Visits\Models\Visitor;
 use Fomvasss\Visits\Support\TokenResolver;
+use Fomvasss\Visits\Tests\Fixtures\TestUser;
 use Fomvasss\Visits\Tests\TestCase;
 use Illuminate\Http\Request;
 
@@ -139,6 +141,86 @@ class TokenResolverTest extends TestCase
         $request = Request::create('/', 'POST');
 
         $token = $this->resolver->resolve($request, fn () => null);
+
+        $this->assertTrue($this->resolver->isValidFormat($token));
+    }
+
+    public function test_inherits_from_authenticated_users_visitor_when_no_other_signal(): void
+    {
+        $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
+        $visitor = Visitor::factory()->create([
+            'user_type' => TestUser::class, 'user_id' => $user->id, 'last_seen_at' => now(),
+        ]);
+
+        $request = Request::create('/', 'POST');
+        $request->setUserResolver(fn () => $user);
+
+        $this->assertSame($visitor->token, $this->resolver->resolve($request));
+    }
+
+    public function test_auth_inherit_prefers_the_most_recently_active_visitor(): void
+    {
+        $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
+        Visitor::factory()->create([
+            'user_type' => TestUser::class, 'user_id' => $user->id, 'last_seen_at' => now()->subDays(3),
+        ]);
+        $recent = Visitor::factory()->create([
+            'user_type' => TestUser::class, 'user_id' => $user->id, 'last_seen_at' => now(),
+        ]);
+
+        $request = Request::create('/', 'POST');
+        $request->setUserResolver(fn () => $user);
+
+        $this->assertSame($recent->token, $this->resolver->resolve($request));
+    }
+
+    public function test_auth_inherit_never_consulted_when_a_cookie_is_present(): void
+    {
+        $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
+        Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
+
+        $cookieToken = str_repeat('c', 40);
+        $request = Request::create('/', 'GET');
+        $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
+        $request->setUserResolver(fn () => $user);
+
+        $this->assertSame($cookieToken, $this->resolver->resolve($request));
+    }
+
+    public function test_explicit_fallback_wins_over_auth_inherit(): void
+    {
+        $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
+        Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
+
+        $fallbackToken = str_repeat('f', 40);
+        $request = Request::create('/', 'POST');
+        $request->setUserResolver(fn () => $user);
+
+        $this->assertSame($fallbackToken, $this->resolver->resolve($request, fn () => $fallbackToken));
+    }
+
+    public function test_generates_fresh_token_when_authenticated_user_has_no_visitor(): void
+    {
+        $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
+
+        $request = Request::create('/', 'POST');
+        $request->setUserResolver(fn () => $user);
+
+        $token = $this->resolver->resolve($request);
+
+        $this->assertTrue($this->resolver->isValidFormat($token));
+    }
+
+    public function test_auth_inherit_skipped_when_user_model_has_no_visitor_profiles(): void
+    {
+        $plainUser = new class {
+            public $id = 1;
+        };
+
+        $request = Request::create('/', 'POST');
+        $request->setUserResolver(fn () => $plainUser);
+
+        $token = $this->resolver->resolve($request);
 
         $this->assertTrue($this->resolver->isValidFormat($token));
     }
