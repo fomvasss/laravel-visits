@@ -52,9 +52,9 @@ class IdentityListenersTest extends TestCase
         $session->refresh();
 
         $this->assertSame(TestUser::class, $visitor->user_type);
-        $this->assertSame($user->id, $visitor->user_id);
+        $this->assertSame((string) $user->id, $visitor->user_id);
         $this->assertSame(TestUser::class, $session->user_type);
-        $this->assertSame($user->id, $session->user_id);
+        $this->assertSame((string) $user->id, $session->user_id);
     }
 
     public function test_login_does_not_overwrite_a_session_already_attributed(): void
@@ -77,8 +77,8 @@ class IdentityListenersTest extends TestCase
         $visitor->refresh();
         $session->refresh();
 
-        $this->assertSame($newUser->id, $visitor->user_id, 'visitor identity is mutable, always updated');
-        $this->assertSame($previousUser->id, $session->user_id, 'session identity is an immutable snapshot');
+        $this->assertSame((string) $newUser->id, $visitor->user_id, 'visitor identity is mutable, always updated');
+        $this->assertSame((string) $previousUser->id, $session->user_id, 'session identity is an immutable snapshot');
     }
 
     public function test_login_ignores_sessions_past_the_timeout(): void
@@ -150,7 +150,7 @@ class IdentityListenersTest extends TestCase
 
         $visitor->refresh();
         $this->assertSame(TestUser::class, $visitor->user_type);
-        $this->assertSame($user->id, $visitor->user_id);
+        $this->assertSame((string) $user->id, $visitor->user_id);
     }
 
     public function test_logout_never_touches_session_identity_snapshot(): void
@@ -168,6 +168,6 @@ class IdentityListenersTest extends TestCase
         $this->bindRequestWithVisitorCookie();
         event(new Logout('web', $user));
 
-        $this->assertSame($user->id, $session->refresh()->user_id);
+        $this->assertSame((string) $user->id, $session->refresh()->user_id);
     }
 }

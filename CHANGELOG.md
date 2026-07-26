@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-26
+
+### Fixed
+- `visit_visitors.user_id`/`visit_sessions.user_id` were `nullableMorphs()`'s default `unsignedBigInteger` — any auth model with a UUID/ULID primary key (`HasUuids`) crashed `RecordVisitJob` on every authenticated request (`invalid input syntax for type bigint`), silently dropping the visit (no retry with the default `tries=1`). Both columns are now plain `string`, same reasoning already applied to `eventable_id` in 0.2.0. **Existing installs**: this only changes the migration for fresh installs — if you already ran it, alter the columns manually (`ALTER TABLE visit_visitors ALTER COLUMN user_id TYPE varchar(255)`, same for `visit_sessions`; adjust syntax for MySQL/SQLite) instead of re-running migrate.
+
+### Changed
+- `visit_sessions` gained an index on `(visitor_id, ended_at, last_activity_at)` — the "find this visitor's currently-open session" lookup (`RecordVisitJob::resolveSession()`, `VisitorIdentityMerger`) runs on every single tracked event/action and every `Login`/`identify()` call; the existing `(visitor_id, started_at)` index didn't match its `WHERE`/`ORDER BY` columns at all.
+- `visit_events` gained an index on `(type, created_at)` — the dashboard's Top Pages panel filters `type=page_view` over a date range; previously only separate single-column indexes existed for each. **Existing installs**: both are pure additions (no column changes) — a normal `php artisan migrate` picks them up; only installs that already ran these migrations before this version need to add the two indexes manually (see the two `create_visit_sessions_table`/`create_visit_events_table` migrations for the exact column lists).
+- **Breaking (pre-1.0, no production installs yet):** the three follow-up "add column" migrations (`search_term`, `route_name`, `path`) are merged back into their respective `create_visit_*_table` migrations — fewer migration files, one schema per table to read instead of a create + a trail of alters. Anything that already ran the old migration files must drop the `visit_*` tables and re-migrate from scratch; the old migration files no longer exist, so `php artisan migrate` alone won't reconcile an existing install.
+
 ## [0.6.0] - 2026-07-26
 
 ### Added

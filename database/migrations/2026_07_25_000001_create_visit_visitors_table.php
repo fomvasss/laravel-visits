@@ -33,6 +33,8 @@ return new class extends Migration {
             $t->string('utm_term')->nullable();
             $t->string('utm_content')->nullable();
             $t->string('ref')->nullable()->index();
+            // first-touch, written once, never overwritten — same semantics as utm_source/ref
+            $t->string('search_term')->nullable()->index();
             // last-known, mutable, updated every new session
             $t->string('country_code', 2)->nullable()->index();
             $t->string('region')->nullable();
@@ -62,7 +64,11 @@ return new class extends Migration {
 
             // relation fields
             // mutable "current known identity" — updated on every Login, never reset on Logout by default
-            $t->nullableMorphs('user');
+            // Plain string id (not nullableMorphs()'s default unsignedBigInteger) — same reasoning
+            // as eventable_id on visit_events: the host's auth model may use a UUID/ULID key.
+            $t->string('user_type')->nullable();
+            $t->string('user_id')->nullable();
+            $t->index(['user_type', 'user_id']);
             // default '' (not NULL) — aggregation queries compare tenant_id = '' for the
             // no-tenant case, and NULL never equals '' in SQL; see visit_stats_daily for the
             // same reasoning.

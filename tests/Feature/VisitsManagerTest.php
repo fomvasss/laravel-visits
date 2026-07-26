@@ -141,7 +141,7 @@ class VisitsManagerTest extends TestCase
 
         $visitor->refresh();
         $this->assertSame(TestUser::class, $visitor->user_type);
-        $this->assertSame($user->id, $visitor->user_id);
+        $this->assertSame((string) $user->id, $visitor->user_id);
     }
 
     public function test_identify_does_nothing_when_no_visitor_matches_the_current_token(): void
