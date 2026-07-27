@@ -39,6 +39,17 @@ trait HasVisits
             });
     }
 
+    /** Same $name-constrained ofMany reasoning as latestVisitEvent(), just min instead of max. */
+    public function firstVisitEvent(?string $name = null): MorphOne
+    {
+        return $this->morphOne(ModelResolver::event(), 'eventable')
+            ->ofMany(['created_at' => 'min'], function ($query) use ($name) {
+                if ($name) {
+                    $query->where('name', $name);
+                }
+            });
+    }
+
     /**
      * Only meaningful on the host's User model(s) — every Visitor row ever linked to this
      * person via Visitor.user_id/user_type (set on Login, see MergeVisitorIdentity), across
@@ -47,5 +58,19 @@ trait HasVisits
     public function visitorProfiles(): MorphMany
     {
         return $this->morphMany(ModelResolver::visitor(), 'user');
+    }
+
+    /** Earliest device/browser this person was ever seen on, by Visitor.first_seen_at. */
+    public function firstVisitorProfile(): MorphOne
+    {
+        return $this->morphOne(ModelResolver::visitor(), 'user')
+            ->ofMany(['first_seen_at' => 'min']);
+    }
+
+    /** Most recently active device/browser this person was seen on, by Visitor.last_seen_at. */
+    public function latestVisitorProfile(): MorphOne
+    {
+        return $this->morphOne(ModelResolver::visitor(), 'user')
+            ->ofMany(['last_seen_at' => 'max']);
     }
 }

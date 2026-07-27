@@ -254,6 +254,7 @@ class Order extends Model
 
 $order->visitEvents; // кожен Event, прив'язаний до цієї моделі через eventable
 $order->latestVisitEvent('order.shipped')->first(); // останній Event з цією назвою, або null
+$order->firstVisitEvent('order.placed')->first(); // найперший Event з цією назвою, або null
 ```
 
 #### Читання даних з eventable-моделі (напр. `Order`)
@@ -282,13 +283,23 @@ $order->latestVisitEvent('order.paid')->first();
 ```php
 $user->visitorProfiles; // кожен Visitor, коли-небудь пов'язаний з цим юзером, на всіх його пристроях/браузерах
 
-$user->visitorProfiles->count();                              // скільки різних пристроїв/браузерів він використовував залогінений
-$user->visitorProfiles->sortByDesc('last_seen_at')->first();  // його найостанніше активний пристрій
-$user->visitorProfiles->pluck('utm_source', 'id');            // канал залучення (first-touch) по кожному пристрою
+$user->visitorProfiles->count();                    // скільки різних пристроїв/браузерів він використовував залогінений
+$user->firstVisitorProfile;   // пристрій/браузер, на якому він з'явився вперше, за first_seen_at
+$user->latestVisitorProfile;  // його найостанніше активний пристрій/браузер, за last_seen_at
+$user->visitorProfiles->pluck('utm_source', 'id');  // канал залучення (first-touch) по кожному пристрою
 
 // усі Event на всіх пристроях, якими коли-небудь користувався цей юзер, напр. усі його конверсії
 $user->visitorProfiles->flatMap->events;
 $user->visitorProfiles->flatMap->events->where('type', \Fomvasss\Visits\Models\Event::TYPE_ACTION);
+```
+
+`firstVisitorProfile`/`latestVisitorProfile` — це `ofMany()`-звʼязки (як і `latestVisitEvent`), тож резолвляться одним запитом і підтримують eager load — немає потреби тягнути всі `Visitor` в PHP, щоб вибрати один.
+
+Кожен `Visitor` має ту саму пару "перший/останній" на рівень нижче, над власними `Session`:
+
+```php
+$user->latestVisitorProfile->firstSession;   // найперша Session цього пристрою (незмінний знімок: ip, гео, девайс на той момент)
+$user->latestVisitorProfile->latestSession;  // найостанніша Session цього пристрою
 ```
 
 `Visitor` пов'язується з `User` лише з моменту логіну на цьому пристрої (див. [`VisitorIdentified`](#події), генерується на власній події Laravel `Login`) — анонімний перегляд до першого логіну на конкретному пристрої й далі лишається в рядках `Visitor`/`Session`, просто недоступний через `$user->visitorProfiles`, поки зв'язок не з'явився.

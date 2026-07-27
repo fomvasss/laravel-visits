@@ -11,6 +11,7 @@ use Fomvasss\Visits\Support\ModelResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Visitor extends Model
@@ -42,6 +43,18 @@ class Visitor extends Model
     public function sessions(): HasMany
     {
         return $this->hasMany(ModelResolver::session(), 'visitor_id');
+    }
+
+    public function firstSession(): HasOne
+    {
+        return $this->hasOne(ModelResolver::session(), 'visitor_id')
+            ->ofMany(['started_at' => 'min']);
+    }
+
+    public function latestSession(): HasOne
+    {
+        return $this->hasOne(ModelResolver::session(), 'visitor_id')
+            ->ofMany(['started_at' => 'max']);
     }
 
     public function events(): HasMany

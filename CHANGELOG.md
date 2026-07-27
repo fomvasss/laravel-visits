@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-27
+
+### Added
+- `HasVisits::firstVisitorProfile()`/`latestVisitorProfile()` — `ofMany()` relations resolving to the earliest/most-recently-active `Visitor` linked to a host model (by `first_seen_at`/`last_seen_at`), alongside the existing `latestVisitEvent()`.
+- `HasVisits::firstVisitEvent(?string $name = null)` — the `min` counterpart to `latestVisitEvent()`.
+- `Visitor::firstSession()`/`latestSession()` — `ofMany()` relations resolving to a visitor's earliest/most recent `Session`, replacing the common `sessions()->oldest('started_at')->first()`/`->latest('started_at')->first()` host-app pattern.
+
 ## [0.9.2] - 2026-07-26
 
 ### Fixed

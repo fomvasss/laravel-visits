@@ -257,6 +257,7 @@ class Order extends Model
 
 $order->visitEvents; // every Event tied to this model via eventable
 $order->latestVisitEvent('order.shipped')->first(); // latest Event with this name, or null
+$order->firstVisitEvent('order.placed')->first(); // earliest Event with this name, or null
 ```
 
 #### Reading data back from an eventable model (e.g. `Order`)
@@ -286,12 +287,22 @@ On a `User` model (or whatever your auth model is), the same trait also exposes:
 $user->visitorProfiles; // every Visitor ever linked to this user across all their devices/browsers
 
 $user->visitorProfiles->count();                    // how many distinct devices/browsers they've used while logged in
-$user->visitorProfiles->sortByDesc('last_seen_at')->first(); // their most recently active device
+$user->firstVisitorProfile;   // the device/browser they first ever showed up on, by first_seen_at
+$user->latestVisitorProfile;  // their most recently active device/browser, by last_seen_at
 $user->visitorProfiles->pluck('utm_source', 'id');  // first-touch acquisition channel per device
 
 // every Event across every device this user has ever used, e.g. all their conversions
 $user->visitorProfiles->flatMap->events;
 $user->visitorProfiles->flatMap->events->where('type', \Fomvasss\Visits\Models\Event::TYPE_ACTION);
+```
+
+`firstVisitorProfile`/`latestVisitorProfile` are `ofMany()` relations (like `latestVisitEvent`), so they resolve in a single query and are eager-loadable — no need to pull every `Visitor` row into PHP just to pick one.
+
+Each `Visitor` also exposes the same first/last pair one level down, over its own `Session` rows:
+
+```php
+$user->latestVisitorProfile->firstSession;   // that device's very first Session (immutable snapshot: ip, geo, device at the time)
+$user->latestVisitorProfile->latestSession;  // that device's most recent Session
 ```
 
 A `Visitor` only links to a `User` from the moment they logged in on that device (see [`VisitorIdentified`](#events), fired on Laravel's own `Login` event) — anonymous browsing before that first login on a given device is still there on the `Visitor`/`Session` rows, just not reachable through `$user->visitorProfiles` until the link exists.
