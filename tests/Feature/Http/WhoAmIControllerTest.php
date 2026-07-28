@@ -49,7 +49,7 @@ class WhoAmIControllerTest extends TestCase
     public function test_reflects_the_supplied_client_token_without_persisting_it(): void
     {
         Location::fake([]);
-        $token = str_repeat('a', 40);
+        $token = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
         $response = $this->getJson(route('visits.whoami'), ['X-Visitor-Id' => $token]);
 

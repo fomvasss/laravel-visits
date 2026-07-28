@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-28
+
+### Changed
+- Visitor token format switched from a 40-char random alphanumeric string to a UUID (`TokenResolver::generate()` now uses `Str::uuid()`); `visitor_id.format_regex` now enforces the standard UUID format instead of `[a-zA-Z0-9]{20,64}`. Made while the package is still pre-1.0, anticipating visitor identifiers arriving from external systems (which commonly hand over UUIDs already) — cheaper to standardize the format now than after production data accumulates.
+
+### Added
+- `token_resolver` config key — override `TokenResolver` with your own subclass (same override pattern as `models`), bound through the container so every class that type-hints `TokenResolver` (`TrackVisit`, `CollectController`, `VisitsManager`, the identity listeners) picks up the override consistently.
+
 ## [0.10.0] - 2026-07-27
 
 ### Added

@@ -538,9 +538,10 @@ The full annotated config file is at [`config/visits.php`](config/visits.php) â€
 |---|---|
 | `enabled` | Master switch for the whole package. |
 | `models` | Override `Visitor`/`Session`/`Event`/`StatDaily` with your own subclasses. |
+| `token_resolver` | Override `TokenResolver` with your own subclass (same pattern as `models`). |
 | `queue` | Connection/queue name `RecordVisitJob` dispatches to. |
 | `cookie` | Visitor identity cookie name/TTL. |
-| `visitor_id.format_regex` | Format accepted from a client-supplied `X-Visitor-Id`/`visitor_id`. |
+| `visitor_id.format_regex` | Format accepted from a client-supplied `X-Visitor-Id`/`visitor_id` â€” a UUID by default (`TokenResolver::generate()` produces one too, so every token in the system shares one format regardless of origin). |
 | `reset_identity_on_logout` | Clear `Visitor.user_id` on logout (shared/kiosk devices). |
 | `session_timeout_minutes` | Inactivity window before `visits:close-stale-sessions` closes a session. |
 | `auto_track` | `false` switches `TrackVisit` from global-with-denylist to manual-attach-only (see [Automatic page views](#automatic-page-views)). |

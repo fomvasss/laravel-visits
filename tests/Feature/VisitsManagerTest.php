@@ -15,6 +15,7 @@ use Fomvasss\Visits\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 
 class VisitsManagerTest extends TestCase
 {
@@ -106,7 +107,7 @@ class VisitsManagerTest extends TestCase
             'eventable_type' => TestOrder::class, 'eventable_id' => $order->id,
         ]);
 
-        $cookieToken = str_repeat('c', 40);
+        $cookieToken = '44444444-4444-4444-4444-444444444444';
         $request = Request::create('https://example.test/paid', 'POST');
         $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
         $this->app->instance(Request::class, $request);
@@ -124,12 +125,12 @@ class VisitsManagerTest extends TestCase
 
         Visits::track('order.paid', $order, ['amount' => 42.5], inheritFrom: 'order.placed');
 
-        Queue::assertPushed(RecordVisitJob::class, fn ($job) => is_string($job->payload->token) && strlen($job->payload->token) === 40);
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => is_string($job->payload->token) && Str::isUuid($job->payload->token));
     }
 
     public function test_identify_links_the_current_visitor_to_the_given_user_without_a_login_event(): void
     {
-        $cookieToken = str_repeat('c', 40);
+        $cookieToken = '44444444-4444-4444-4444-444444444444';
         $request = Request::create('https://example.test/checkout', 'POST');
         $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
         $this->app->instance(Request::class, $request);

@@ -14,10 +14,10 @@ use Illuminate\Http\Request;
 
 class IdentityListenersTest extends TestCase
 {
-    // must satisfy TokenResolver::isValidFormat() — alphanumeric only, 20-64 chars — or
-    // TokenResolver::resolve() silently discards it and generates a fresh random one instead,
-    // which then never matches the visitor row seeded with this exact token
-    private const TOKEN = 'logintesttoken1234567890abcd';
+    // must satisfy TokenResolver::isValidFormat() — a UUID — or TokenResolver::resolve()
+    // silently discards it and generates a fresh random one instead, which then never matches
+    // the visitor row seeded with this exact token
+    private const TOKEN = '11111111-1111-1111-1111-111111111111';
 
     private function bindRequestWithVisitorCookie(string $token = self::TOKEN): void
     {
@@ -130,7 +130,7 @@ class IdentityListenersTest extends TestCase
 
     public function test_login_does_nothing_when_no_visitor_matches_the_token(): void
     {
-        $this->bindRequestWithVisitorCookie('someunknowntokenxyz1234567890');
+        $this->bindRequestWithVisitorCookie('99999999-9999-9999-9999-999999999999');
 
         event(new Login('web', $this->user(), false));
 

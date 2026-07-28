@@ -39,6 +39,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Token Resolver Override
+    |--------------------------------------------------------------------------
+    |
+    | Swap the visitor-identity resolution strategy (client header/input →
+    | cookie → fallback → authenticated user → generate) with your own
+    | subclass — e.g. a different generate()/isValidFormat() if identifiers
+    | end up coming from an external system instead of this package. Bound
+    | through the container, so every class that type-hints TokenResolver
+    | picks up the override.
+    |
+    */
+
+    'token_resolver' => \Fomvasss\Visits\Support\TokenResolver::class,
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue
     |--------------------------------------------------------------------------
     |
@@ -78,14 +94,15 @@ return [
     | (query string, POST body, or JSON) when a client hands the package an
     | already-existing identifier instead of letting it generate one — e.g.
     | a landing page's own anon_id passed via ?visitor_id=... on the link
-    | to the main site. Kept deliberately restrictive by default: the value
-    | ends up in a DB column, a cookie value and a URL, so the pattern also
-    | guards against unbounded/unsafe values, not just style.
+    | to the main site, or an external system's own visitor identifier.
+    | Strict UUID (case-insensitive, any version/variant) — the package's
+    | own generate() also produces a UUID, so every token in the system
+    | shares one format regardless of origin.
     |
     */
 
     'visitor_id' => [
-        'format_regex' => '/^[a-zA-Z0-9]{20,64}$/',
+        'format_regex' => '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
     ],
 
     /*

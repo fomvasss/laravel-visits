@@ -77,7 +77,7 @@ class CollectControllerTest extends TestCase
     public function test_reuses_client_supplied_token_header(): void
     {
         Queue::fake();
-        $token = str_repeat('x', 40);
+        $token = '33333333-3333-3333-3333-333333333333';
 
         $response = $this->postJson('/visits/collect', [], ['X-Visitor-Id' => $token]);
 

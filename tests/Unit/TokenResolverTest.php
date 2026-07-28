@@ -9,6 +9,7 @@ use Fomvasss\Visits\Support\TokenResolver;
 use Fomvasss\Visits\Tests\Fixtures\TestUser;
 use Fomvasss\Visits\Tests\TestCase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class TokenResolverTest extends TestCase
 {
@@ -20,32 +21,43 @@ class TokenResolverTest extends TestCase
         $this->resolver = new TokenResolver();
     }
 
-    public function test_generate_returns_forty_char_alphanumeric_string(): void
+    /**
+     * Valid-format UUID, distinguishable per test by its repeated hex digit — real UUIDs would
+     * work just as well, but a fixed, readable value makes assertions easier to follow.
+     */
+    private function uuidOf(string $hexDigit): string
+    {
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            str_repeat($hexDigit, 8),
+            str_repeat($hexDigit, 4),
+            str_repeat($hexDigit, 4),
+            str_repeat($hexDigit, 4),
+            str_repeat($hexDigit, 12),
+        );
+    }
+
+    public function test_generate_returns_a_uuid(): void
     {
         $token = $this->resolver->generate();
 
-        $this->assertSame(40, strlen($token));
+        $this->assertTrue(Str::isUuid($token));
         $this->assertTrue($this->resolver->isValidFormat($token));
     }
 
-    public function test_rejects_tokens_outside_length_bounds(): void
+    public function test_rejects_malformed_uuids(): void
     {
-        $this->assertFalse($this->resolver->isValidFormat(str_repeat('a', 19)));
-        $this->assertTrue($this->resolver->isValidFormat(str_repeat('a', 20)));
-        $this->assertTrue($this->resolver->isValidFormat(str_repeat('a', 64)));
-        $this->assertFalse($this->resolver->isValidFormat(str_repeat('a', 65)));
-    }
-
-    public function test_rejects_non_alphanumeric_characters(): void
-    {
-        $this->assertFalse($this->resolver->isValidFormat(str_repeat('a', 19) . '_'));
-        $this->assertFalse($this->resolver->isValidFormat(str_repeat('a', 19) . '-'));
+        $this->assertFalse($this->resolver->isValidFormat(str_repeat('a', 36)), 'no dashes');
+        $this->assertFalse($this->resolver->isValidFormat($this->uuidOf('a') . '0'), 'too long');
+        $this->assertFalse($this->resolver->isValidFormat(substr($this->uuidOf('a'), 0, -1)), 'too short');
+        $this->assertFalse($this->resolver->isValidFormat('gggggggg-gggg-gggg-gggg-gggggggggggg'), 'non-hex characters');
+        $this->assertTrue($this->resolver->isValidFormat($this->uuidOf('a')));
     }
 
     public function test_client_header_token_wins_over_cookie(): void
     {
-        $headerToken = str_repeat('h', 40);
-        $cookieToken = str_repeat('c', 40);
+        $headerToken = $this->uuidOf('1');
+        $cookieToken = $this->uuidOf('2');
 
         $request = Request::create('/', 'GET');
         $request->headers->set(TokenResolver::HEADER, $headerToken);
@@ -56,8 +68,8 @@ class TokenResolverTest extends TestCase
 
     public function test_client_body_token_wins_over_cookie(): void
     {
-        $bodyToken = str_repeat('b', 40);
-        $cookieToken = str_repeat('c', 40);
+        $bodyToken = $this->uuidOf('3');
+        $cookieToken = $this->uuidOf('2');
 
         $request = Request::create('/', 'POST', [TokenResolver::INPUT_KEY => $bodyToken]);
         $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
@@ -67,7 +79,7 @@ class TokenResolverTest extends TestCase
 
     public function test_falls_back_to_cookie_when_no_client_token(): void
     {
-        $cookieToken = str_repeat('c', 40);
+        $cookieToken = $this->uuidOf('2');
 
         $request = Request::create('/', 'GET');
         $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
@@ -86,7 +98,7 @@ class TokenResolverTest extends TestCase
 
     public function test_malformed_client_token_is_ignored_in_favor_of_cookie(): void
     {
-        $cookieToken = str_repeat('c', 40);
+        $cookieToken = $this->uuidOf('2');
 
         $request = Request::create('/', 'GET');
         $request->headers->set(TokenResolver::HEADER, 'not_a_valid_token!!');
@@ -108,7 +120,7 @@ class TokenResolverTest extends TestCase
 
     public function test_fallback_is_used_when_no_client_token_or_cookie(): void
     {
-        $fallbackToken = str_repeat('f', 40);
+        $fallbackToken = $this->uuidOf('4');
         $request = Request::create('/', 'POST');
 
         $this->assertSame($fallbackToken, $this->resolver->resolve($request, fn () => $fallbackToken));
@@ -116,7 +128,7 @@ class TokenResolverTest extends TestCase
 
     public function test_fallback_is_never_consulted_when_a_cookie_is_present(): void
     {
-        $cookieToken = str_repeat('c', 40);
+        $cookieToken = $this->uuidOf('2');
         $request = Request::create('/', 'GET');
         $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
 
@@ -179,7 +191,7 @@ class TokenResolverTest extends TestCase
         $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
         Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
 
-        $cookieToken = str_repeat('c', 40);
+        $cookieToken = $this->uuidOf('2');
         $request = Request::create('/', 'GET');
         $request->cookies->set((string) config('visits.cookie.name'), $cookieToken);
         $request->setUserResolver(fn () => $user);
@@ -192,7 +204,7 @@ class TokenResolverTest extends TestCase
         $user = TestUser::create(['name' => 'Vas', 'email' => 'vas@example.test']);
         Visitor::factory()->create(['user_type' => TestUser::class, 'user_id' => $user->id]);
 
-        $fallbackToken = str_repeat('f', 40);
+        $fallbackToken = $this->uuidOf('4');
         $request = Request::create('/', 'POST');
         $request->setUserResolver(fn () => $user);
 
@@ -227,13 +239,13 @@ class TokenResolverTest extends TestCase
 
     public function test_format_regex_is_configurable(): void
     {
-        $uuid = '550e8400-e29b-41d4-a716-446655440000';
+        $legacyToken = str_repeat('a', 40);
 
-        $this->assertFalse($this->resolver->isValidFormat($uuid));
+        $this->assertFalse($this->resolver->isValidFormat($legacyToken));
 
-        config(['visits.visitor_id.format_regex' => '/^[a-f0-9-]{36}$/']);
+        config(['visits.visitor_id.format_regex' => '/^[a-zA-Z0-9]{20,64}$/']);
 
-        $this->assertTrue($this->resolver->isValidFormat($uuid));
-        $this->assertFalse($this->resolver->isValidFormat(str_repeat('a', 40)));
+        $this->assertTrue($this->resolver->isValidFormat($legacyToken));
+        $this->assertFalse($this->resolver->isValidFormat($this->uuidOf('a') . '-extra'));
     }
 }

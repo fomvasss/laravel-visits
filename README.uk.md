@@ -533,9 +533,10 @@ Schedule::command('visits:aggregate --date=yesterday')->dailyAt('00:10');
 |---|---|
 | `enabled` | Головний перемикач для всього пакета. |
 | `models` | Перевизначити `Visitor`/`Session`/`Event`/`StatDaily` власними підкласами. |
+| `token_resolver` | Перевизначити `TokenResolver` власним підкласом (той самий патерн, що і `models`). |
 | `queue` | Назва з'єднання/черги, в яку диспатчиться `RecordVisitJob`. |
 | `cookie` | Назва/TTL cookie ідентичності відвідувача. |
-| `visitor_id.format_regex` | Формат, який приймається від клієнтського `X-Visitor-Id`/`visitor_id`. |
+| `visitor_id.format_regex` | Формат, який приймається від клієнтського `X-Visitor-Id`/`visitor_id` — за замовчуванням UUID (`TokenResolver::generate()` теж генерує UUID, тож усі токени в системі мають один формат незалежно від джерела). |
 | `reset_identity_on_logout` | Скидати `Visitor.user_id` на логауті (спільні/кіоскові пристрої). |
 | `session_timeout_minutes` | Вікно неактивності, перш ніж `visits:close-stale-sessions` закриє сесію. |
 | `auto_track` | `false` перемикає `TrackVisit` з глобального-з-денайлистом режиму на ручне підключення (див. [Автоматичний трекінг переглядів](#автоматичний-трекінг-переглядів)). |

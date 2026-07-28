@@ -100,7 +100,7 @@ class TokenResolver
 
     public function generate(): string
     {
-        return Str::random(40);
+        return (string) Str::uuid();
     }
 
     public function isValidFormat(string $token): bool

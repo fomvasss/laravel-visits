@@ -14,6 +14,7 @@ use Fomvasss\Visits\Http\Controllers\WhoAmIController;
 use Fomvasss\Visits\Http\Middleware\TrackVisit;
 use Fomvasss\Visits\Listeners\MergeVisitorIdentity;
 use Fomvasss\Visits\Listeners\ResetVisitorIdentity;
+use Fomvasss\Visits\Support\TokenResolver;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Console\Scheduling\Schedule;
@@ -26,6 +27,13 @@ class VisitsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/visits.php', 'visits');
+
+        // build(), not make() — the configured class defaults to TokenResolver::class itself,
+        // and make() would re-enter this very binding, recursing until the stack/memory blows up.
+        // build() bypasses container bindings and constructs the class directly via reflection.
+        $this->app->bind(TokenResolver::class, fn ($app) => $app->build(
+            config('visits.token_resolver', TokenResolver::class)
+        ));
     }
 
     public function boot(): void

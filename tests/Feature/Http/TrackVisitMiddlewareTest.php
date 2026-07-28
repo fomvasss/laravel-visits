@@ -144,7 +144,7 @@ class TrackVisitMiddlewareTest extends TestCase
     public function test_reuses_existing_visitor_cookie_as_the_token(): void
     {
         Queue::fake();
-        $token = str_repeat('z', 40);
+        $token = '22222222-2222-2222-2222-222222222222';
 
         $this->withCookie((string) config('visits.cookie.name'), $token)
             ->get('/test-page')
@@ -157,7 +157,7 @@ class TrackVisitMiddlewareTest extends TestCase
     {
         Queue::fake();
 
-        $this->withCookie((string) config('visits.cookie.name'), str_repeat('z', 40))
+        $this->withCookie((string) config('visits.cookie.name'), '22222222-2222-2222-2222-222222222222')
             ->get('/test-page')
             ->assertOk();
 
@@ -179,7 +179,7 @@ class TrackVisitMiddlewareTest extends TestCase
         Queue::fake();
         config(['visits.page_views' => 'first_only']);
 
-        $this->withCookie((string) config('visits.cookie.name'), str_repeat('z', 40))
+        $this->withCookie((string) config('visits.cookie.name'), '22222222-2222-2222-2222-222222222222')
             ->get('/test-page')
             ->assertOk();
 
@@ -191,7 +191,7 @@ class TrackVisitMiddlewareTest extends TestCase
         Queue::fake();
         config(['visits.page_views' => 'first_only']);
 
-        $this->withCookie((string) config('visits.cookie.name'), str_repeat('z', 40))
+        $this->withCookie((string) config('visits.cookie.name'), '22222222-2222-2222-2222-222222222222')
             ->get('/test-page')
             ->assertOk();
 

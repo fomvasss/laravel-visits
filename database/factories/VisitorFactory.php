@@ -26,7 +26,7 @@ class VisitorFactory extends Factory
         $device = fake()->randomElement($this->devices());
 
         return [
-            'token' => Str::random(40),
+            'token' => (string) Str::uuid(),
             'tenant_id' => '',
             'first_seen_at' => $firstSeen,
             'last_seen_at' => $firstSeen,
