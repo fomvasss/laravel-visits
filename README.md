@@ -135,7 +135,7 @@ Which mechanism to use depends on what kind of app is on the other end:
 
 ### Automatic page views
 
-Any `GET` request through the `web` middleware group is tracked automatically, except paths matching `visits.exclude_paths` (admin/debugbar/horizon/health-check paths are excluded by default) — and the package's own dashboard/whoami paths, which are always excluded regardless of `exclude_paths` (otherwise browsing `/visits` would itself generate page-view rows about viewing the dashboard).
+Any `GET` request through the `web` middleware group is tracked automatically, except paths matching `visits.exclude_paths` (admin/debugbar/horizon/health-check/storage paths are excluded by default) — and the package's own dashboard/whoami paths, which are always excluded regardless of `exclude_paths` (otherwise browsing `/visits` would itself generate page-view rows about viewing the dashboard).
 
 Set `visits.auto_track` to `false` to flip this from a denylist to an allowlist: `TrackVisit` is no longer pushed onto the `web` group automatically, and `exclude_paths` no longer applies (nothing to exclude from). It's still registered under the `track-visits` alias, so attach it to only the routes you actually want tracked:
 

@@ -153,7 +153,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | Only relevant when auto_track is true. Routes the TrackVisit middleware
-    | never tracks (path patterns, same syntax as Route::is()).
+    | never tracks (path patterns, same syntax as Route::is() — remember the
+    | trailing /*, without it the pattern only matches that exact path with no
+    | sub-segments at all, e.g. 'storage' never matches 'storage/foo.png').
     |
     */
 
@@ -162,6 +164,7 @@ return [
         '_debugbar/*',
         'horizon/*',
         'up',
+        'storage/*',
     ],
 
     /*

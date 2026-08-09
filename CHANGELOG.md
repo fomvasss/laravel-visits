@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-09
+
+### Added
+- `storage/*` added to the default `exclude_paths` — the `storage.local` route (`Storage::url()` fallback when the public disk isn't symlinked/proxied directly by the webserver) is present in effectively every Laravel app and isn't a real page view.
+
+### Fixed
+- `RecordVisitJob` now truncates the referrer URL/host to the `first_referrer_url`/`first_referrer_host` (`Visitor`) and `referrer_url`/`referrer_host` (`Session`) column lengths before saving. A long enough `Referer` header (easily produced by an embedded widget that packs its full config into its own URL) previously threw `SQLSTATE[22001]: Data too long`, dropping the whole visit.
+
 ## [0.11.0] - 2026-07-28
 
 ### Changed

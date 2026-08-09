@@ -139,8 +139,8 @@ class RecordVisitJob implements ShouldQueue
                 'first_seen_at' => now(),
                 'last_seen_at' => now(),
                 'first_landing_url' => $this->payload->url,
-                'first_referrer_url' => $this->payload->referrer,
-                'first_referrer_host' => $this->referrerHost(),
+                'first_referrer_url' => $this->truncate($this->payload->referrer, 2048),
+                'first_referrer_host' => $this->truncate($this->referrerHost(), 255),
                 'search_term' => $this->payload->searchTerm,
                 'extra_params' => $this->payload->extraParams !== [] ? $this->payload->extraParams : null,
                 ...$this->prefixedUtm($this->payload->utm),
@@ -197,8 +197,8 @@ class RecordVisitJob implements ShouldQueue
             'started_at' => now(),
             'last_activity_at' => now(),
             'landing_url' => $this->payload->url,
-            'referrer_url' => $this->payload->referrer,
-            'referrer_host' => $this->referrerHost(),
+            'referrer_url' => $this->truncate($this->payload->referrer, 2048),
+            'referrer_host' => $this->truncate($this->referrerHost(), 255),
             'search_term' => $this->payload->searchTerm ?? $visitor->search_term,
             'extra_params' => $extraParams !== [] ? $extraParams : null,
             'ip' => $this->payload->ip,
@@ -320,5 +320,16 @@ class RecordVisitJob implements ShouldQueue
         }
 
         return parse_url($this->payload->referrer, PHP_URL_HOST) ?: null;
+    }
+
+    /**
+     * Referer/URL значення — довільний вхід з браузера, ніяк не обмежений на клієнті (a widget
+     * embed, наприклад, легко штампує туди kilobytes конфігу в query-рядку). Колонки під них —
+     * VARCHAR з фіксованою довжиною, а не TEXT, тож без обрізання тут insert падає SQLSTATE[22001]
+     * замість тихого запису — краще втратити хвіст рядка, ніж втратити весь visitor/session.
+     */
+    private function truncate(?string $value, int $max): ?string
+    {
+        return $value !== null ? mb_substr($value, 0, $max) : null;
     }
 }
