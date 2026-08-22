@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- A visitor's first two requests arriving together (a page and its XHR, two tabs, a prefetch) no longer lose one of them: both jobs found no visitor row and both inserted, and the unique token index turned the loser into a failed job. Resolving the visitor is a single atomic statement now, so the loser gets the winner's row back and its page view is still recorded.
+
 ## [0.12.0] - 2026-08-09
 
 ### Added

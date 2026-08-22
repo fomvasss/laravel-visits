@@ -109,11 +109,25 @@ class RecordVisitJob implements ShouldQueue
     {
         $visitorClass = ModelResolver::visitor();
 
+        // createOrFirst, not firstOrNew + save(): a visitor's very first two requests can land
+        // together (a page and its XHR, two tabs, a prefetch), both find no row and both insert —
+        // and the unique token index turns the loser into a failed job, i.e. a lost pageview.
+        // This lets the database arbitrate instead: the loser gets the winner's row back.
+        // The values below are only applied when this call is the one that inserts.
         /** @var Visitor $visitor */
         $visitor = $visitorClass::withoutGlobalScope(WithoutBotsScope::class)
-            ->firstOrNew(['token' => $this->payload->token]);
+            ->createOrFirst(['token' => $this->payload->token], [
+                'first_seen_at' => now(),
+                'last_seen_at' => now(),
+                'first_landing_url' => $this->payload->url,
+                'first_referrer_url' => $this->truncate($this->payload->referrer, 2048),
+                'first_referrer_host' => $this->truncate($this->referrerHost(), 255),
+                'search_term' => $this->payload->searchTerm,
+                'extra_params' => $this->payload->extraParams !== [] ? $this->payload->extraParams : null,
+                ...$this->prefixedUtm($this->payload->utm),
+            ]);
 
-        $isNew = ! $visitor->exists;
+        $isNew = $visitor->wasRecentlyCreated;
 
         $visitor->fill([
             'is_bot' => $device['is_bot'],
@@ -133,19 +147,6 @@ class RecordVisitJob implements ShouldQueue
             'client_type' => $device['client_type'],
             'device_meta' => $this->deviceMeta($device),
         ]);
-
-        if ($isNew) {
-            $visitor->fill([
-                'first_seen_at' => now(),
-                'last_seen_at' => now(),
-                'first_landing_url' => $this->payload->url,
-                'first_referrer_url' => $this->truncate($this->payload->referrer, 2048),
-                'first_referrer_host' => $this->truncate($this->referrerHost(), 255),
-                'search_term' => $this->payload->searchTerm,
-                'extra_params' => $this->payload->extraParams !== [] ? $this->payload->extraParams : null,
-                ...$this->prefixedUtm($this->payload->utm),
-            ]);
-        }
 
         if ($this->payload->authUserType && $this->payload->authUserId !== null) {
             $visitor->user_type = $this->payload->authUserType;

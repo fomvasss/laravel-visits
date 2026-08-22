@@ -23,6 +23,39 @@ class RecordVisitJobTest extends TestCase
 
     private const GOOGLEBOT_UA = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 
+    /**
+     * A visitor's very first two requests can land together (a page and its XHR, two tabs, a
+     * prefetch): both jobs look up the token, both find nothing, both insert — and the unique
+     * index used to turn the loser into a failed job, i.e. a lost pageview. Resolving the visitor
+     * is atomic now, so the loser gets the winner's row back.
+     *
+     * This pins the outcome, not the interleaving: the real one can't be staged on a single
+     * in-memory connection, where the competing insert would live inside the same transaction and
+     * roll back with it. The interleaving itself was observed in production (a duplicate-key
+     * failure on visit_visitors.token).
+     */
+    public function test_a_concurrent_first_visit_does_not_lose_a_pageview(): void
+    {
+        $this->fakeGeo();
+
+        $payload = $this->payload();
+
+        // The row the racing job won with.
+        Visitor::create([
+            'token' => $payload->token,
+            'first_seen_at' => now()->subSecond(),
+            'last_seen_at' => now()->subSecond(),
+            'first_landing_url' => 'https://example.test/other',
+        ]);
+
+        app()->call([new RecordVisitJob($payload), 'handle']);
+
+        $this->assertSame(1, Visitor::query()->where('token', $payload->token)->count());
+        $this->assertSame(1, Event::query()->count(), 'the pageview must still be recorded');
+        // The winner's first-seen data is the visitor's, not overwritten by the loser.
+        $this->assertSame('https://example.test/other', Visitor::query()->sole()->first_landing_url);
+    }
+
     private function payload(array $overrides = []): VisitPayload
     {
         $defaults = [
