@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-09-21
+
 ### Fixed
 - `browser_language` no longer stores `*` (the "any language" wildcard some HTTP clients and webviews send in `Accept-Language`) — the first real language from the header is used instead, or `null` if there is none. Tags that don't fit the column are skipped the same way.
 
