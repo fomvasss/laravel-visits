@@ -19,7 +19,23 @@ class LocaleResolver
     {
         return [
             'locale' => app()->getLocale() ?: null,
-            'browser_language' => $request->getLanguages()[0] ?? null,
+            'browser_language' => $this->browserLanguage($request),
         ];
+    }
+
+    /**
+     * First real language from Accept-Language. `*` ("any language" — sent by HTTP clients and
+     * some embedded webviews) is not a language, and a tag longer than the column would fail the
+     * whole visit on insert, so both are skipped in favour of the next entry.
+     */
+    protected function browserLanguage(Request $request): ?string
+    {
+        foreach ($request->getLanguages() as $language) {
+            if (strlen($language) <= 10 && preg_match('/^[a-z]{2,3}(_[a-z0-9]{2,8})*$/i', $language)) {
+                return $language;
+            }
+        }
+
+        return null;
     }
 }

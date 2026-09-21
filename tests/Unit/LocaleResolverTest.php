@@ -32,4 +32,20 @@ class LocaleResolverTest extends TestCase
 
         $this->assertNull($result['browser_language']);
     }
+
+    public function test_wildcard_is_not_a_browser_language(): void
+    {
+        $request = Request::create('/');
+        $request->headers->set('Accept-Language', '*');
+
+        $this->assertNull((new LocaleResolver())->resolve($request)['browser_language']);
+    }
+
+    public function test_wildcard_is_skipped_in_favour_of_the_next_language(): void
+    {
+        $request = Request::create('/');
+        $request->headers->set('Accept-Language', '*, pl;q=0.8');
+
+        $this->assertSame('pl', (new LocaleResolver())->resolve($request)['browser_language']);
+    }
 }
