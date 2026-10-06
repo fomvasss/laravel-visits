@@ -1,6 +1,8 @@
 /vendor
-/node_modules
+node_modules
 composer.lock
 .phpunit.result.cache
 .phpunit.cache/
 .claude/
+/docs/dist
+/docs/.astro
