@@ -50,6 +50,20 @@ class DashboardControllerTest extends TestCase
         $this->get(route('visits.campaigns'))->assertViewHas('tenantId', 'shop-ua');
     }
 
+    public function test_zero_rollups_of_the_global_tenant_do_not_win_the_default(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        // a run before any visitor existed left zero rows for ''
+        $this->artisan('visits:aggregate', ['--date' => 'yesterday']);
+        Visitor::factory()->create(['is_bot' => false, 'first_seen_at' => now(), 'tenant_id' => 'shop-ua']);
+        $this->artisan('visits:aggregate', ['--date' => 'today']);
+
+        $this->get(route('visits.index'))
+            ->assertViewHas('tenantId', 'shop-ua')
+            ->assertViewHas('tenants', fn ($tenants) => $tenants->all() === ['shop-ua']);
+    }
+
     public function test_index_session_breakdown_by_utm_source(): void
     {
         Carbon::setTestNow('2026-03-10 12:00:00');

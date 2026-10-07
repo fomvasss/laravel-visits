@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.9] - 2026-10-07
+
+### Fixed
+- The dashboard still defaulted to tenant `''` on an install with tenants when an aggregation run before the first visitor had written zero rollups for `''`. Tenants with only zero rollups are now ignored for the default and the selector
+
 ## [0.13.8] - 2026-10-07
 
 ### Fixed

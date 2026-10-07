@@ -17,7 +17,7 @@
 | `GET` | `{dashboard.path}/live/feed` | `visits.live.feed` | `dashboard.middleware` | `dashboard.enabled` and `live.enabled` |
 | `GET` | `{dashboard.path}/live/stream` | `visits.live.stream` | `dashboard.middleware` | `dashboard.enabled` and `live.enabled` |
 
-Routes are registered regardless of `visits.enabled`. The collect path is fixed; only the whoami and dashboard paths are configurable.
+With `visits.enabled = false` only `POST /visits/collect` is registered (it answers `{"visitor_id": null}`); the dashboard and whoami routes are not (since 0.13.6). The collect path is fixed; only the whoami and dashboard paths are configurable.
 
 ## `POST visits/collect`
 

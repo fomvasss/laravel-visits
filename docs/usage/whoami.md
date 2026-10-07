@@ -76,7 +76,7 @@ GET /visits/whoami?ip=8.8.8.8
 - `locale` — an object with `locale` (the app locale) and `browser_language`
 - `tracking_params` — `utm` holds the `core` parameters keyed by column, `extra` the `extra_keys` and `extra_pattern` matches; both are `{}` when nothing matched
 
-Configuration: `whoami.enabled`, `whoami.path` (default `visits/whoami`, independent of the dashboard path), `whoami.middleware` (`['web']`) and `rate_limit.whoami` (`60,1`, per IP). The endpoint stays available when `visits.enabled` is `false`.
+Configuration: `whoami.enabled`, `whoami.path` (default `visits/whoami`, independent of the dashboard path), `whoami.middleware` (`['web']`) and `rate_limit.whoami` (`60,1`, per IP). With `visits.enabled = false` the endpoint is not registered (since 0.13.6).
 
 > [!WARNING]
 > The endpoint is public and every uncached `?ip=` triggers a geo lookup on your provider's quota. Keep the throttle, put it behind auth through `whoami.middleware`, or set `whoami.enabled` to `false` if you don't need it.

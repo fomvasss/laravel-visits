@@ -17,6 +17,16 @@ Where the beacon is the only page-view tracking (full-page cache, a separate fro
 
 Beacon events now carry attribution: UTM/click IDs from the page URL and `referrer` from `document.referrer`. The `endpoint: '/visits/collect' + window.location.search` workaround can be removed; it still works.
 
+Behaviour changes in 0.13.x patch releases:
+
+- 0.13.2: a tracked request of a signed-in user links only a visitor that has no user yet; a visitor linked to someone else is moved only by `Login` or `Visits::identify()`.
+- 0.13.3: `visits:aggregate` skips days older than `retention_days`. Re-aggregating history (after a schema change, a bug fix) needs `--force`; on a pruned database don't use it for pruned days.
+- 0.13.4: the package schedule runs with `withoutOverlapping()` and `onOneServer()` — needs a cache store with atomic locks shared by all servers.
+- 0.13.5 / 0.13.9: Overview and Campaigns without `?tenant=` default to a tenant that has non-zero rollups.
+- 0.13.6: `visits.enabled = false` also unregisters the dashboard and whoami, and `Visits::whoami()` returns `[]`.
+- 0.13.7: an event tracked with `inheritFrom` joins the visitor's last session and doesn't change the visitor's geo/device.
+- 0.13.8: `VisitorIdentified` also fires from `RecordVisitJob` (in the queue) when an authenticated request links a visitor for the first time — listeners run for token-authenticated users too.
+
 ## To 0.12
 
 No breaking changes.

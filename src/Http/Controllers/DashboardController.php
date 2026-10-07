@@ -154,7 +154,9 @@ class DashboardController extends Controller
     {
         [$from, $to] = $this->resolveRange($request);
         $statDailyClass = ModelResolver::statDaily();
-        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
+        // only tenants with something counted: aggregation writes zero rollups for '' before any
+        // visitor exists, and those must not win the default or show up in the selector
+        $tenants = $statDailyClass::where('count', '>', 0)->distinct()->orderBy('tenant_id')->pluck('tenant_id');
         $tenantId = $this->resolveTenant($request, $tenants);
 
         $rows = $statDailyClass::whereBetween('date', [$from->toDateString(), $to->toDateString()])
@@ -287,7 +289,9 @@ class DashboardController extends Controller
     {
         [$from, $to] = $this->resolveRange($request);
         $statDailyClass = ModelResolver::statDaily();
-        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
+        // only tenants with something counted: aggregation writes zero rollups for '' before any
+        // visitor exists, and those must not win the default or show up in the selector
+        $tenants = $statDailyClass::where('count', '>', 0)->distinct()->orderBy('tenant_id')->pluck('tenant_id');
         $tenantId = $this->resolveTenant($request, $tenants);
 
         $rows = $statDailyClass::whereBetween('date', [$from->toDateString(), $to->toDateString()])
