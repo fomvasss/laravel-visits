@@ -49,12 +49,14 @@ class VisitsManager
             return;
         }
 
-        $token = $this->tokenResolver->resolve($this->request, function () use ($eventable, $inheritFrom) {
+        $inheritedToken = null;
+
+        $token = $this->tokenResolver->resolve($this->request, function () use ($eventable, $inheritFrom, &$inheritedToken) {
             if (! $inheritFrom || ! $eventable || ! method_exists($eventable, 'latestVisitEvent')) {
                 return null;
             }
 
-            return $eventable->latestVisitEvent($inheritFrom)->first()?->visitor?->token;
+            return $inheritedToken = $eventable->latestVisitEvent($inheritFrom)->first()?->visitor?->token;
         });
 
         // the calling route may not have gone through TrackVisit (e.g. a POST-only checkout
@@ -73,6 +75,7 @@ class VisitsManager
             name: $name,
             eventable: $eventable,
             meta: $meta,
+            inherited: $inheritedToken !== null && $token === $inheritedToken,
         );
 
         RecordVisitJob::dispatch($payload)

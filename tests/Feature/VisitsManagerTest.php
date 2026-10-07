@@ -94,6 +94,39 @@ class VisitsManagerTest extends TestCase
         Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->token === $visitor->token);
     }
 
+    public function test_an_inherited_event_joins_the_visitors_last_session_and_keeps_its_data(): void
+    {
+        \Stevebauman\Location\Facades\Location::fake([]);
+
+        $order = TestOrder::create(['title' => 'Order #1']);
+        $visitor = Visitor::factory()->create(['country_code' => 'UA', 'browser' => 'Firefox']);
+        $session = Session::factory()->create([
+            'visitor_id' => $visitor->id,
+            'is_bot' => false,
+            'last_activity_at' => now()->subHours(3), // timed out long ago
+        ]);
+        Event::factory()->create([
+            'session_id' => $session->id, 'visitor_id' => $visitor->id,
+            'type' => Event::TYPE_ACTION, 'name' => 'order.placed',
+            'eventable_type' => TestOrder::class, 'eventable_id' => $order->id,
+        ]);
+
+        // the payment provider's webhook: its own IP and User-Agent, no visitor identity
+        $this->app->instance(Request::class, Request::create('https://example.test/webhook', 'POST', server: [
+            'REMOTE_ADDR' => '198.51.100.7',
+            'HTTP_USER_AGENT' => 'Stripe/1.0 (+https://stripe.com/docs/webhooks)',
+        ]));
+
+        Visits::track('order.paid', $order, inheritFrom: 'order.placed');
+
+        $this->assertSame(1, Session::withoutGlobalScopes()->count());
+        $paid = Event::withoutGlobalScopes()->where('name', 'order.paid')->sole();
+        $this->assertSame($session->id, $paid->session_id);
+        $this->assertFalse((bool) $paid->is_bot);
+        $this->assertSame('UA', $visitor->fresh()->country_code);
+        $this->assertSame('Firefox', $visitor->fresh()->browser);
+    }
+
     public function test_track_prefers_request_identity_over_inherit_from(): void
     {
         Queue::fake();

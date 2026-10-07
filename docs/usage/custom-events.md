@@ -73,8 +73,7 @@ Visits::track('order.paid', $order, ['amount' => $order->total], inheritFrom: 'o
 
 `inheritFrom` is used only when the request has no visitor id of its own (no valid header, input or cookie). It looks up `$eventable->latestVisitEvent($inheritFrom)->first()?->visitor`, so `$eventable` must use `HasVisits` and already have an event with that name. If there is none (the order was placed before tracking was added), resolution continues with the [authenticated-user fallback](identity.md#logged-in-users-on-bearer-token-apis) and then generates a new id — no error.
 
-> [!WARNING]
-> The webhook request is still a request: its IP, User-Agent and geo are those of the payment provider. If the inherited visitor's session has timed out, the job opens a new session with the provider's IP and device data, and overwrites the visitor's last-known geo and device with them. The `order.paid` event itself is attributed correctly; treat session/visitor geo after such calls with care. Inherited events from bots are not found — `latestVisitEvent()` excludes bot events.
+The webhook's own IP and User-Agent are the payment provider's, so an event whose visitor came from `inheritFrom` (since 0.13.7) skips the geo lookup, goes into the visitor's most recent session even if it has timed out, takes that session's bot flag, and leaves the visitor's last-known geo and device, `last_seen_at` and the session's `last_activity_at` alone. Before 0.13.7 a timed-out session was replaced by a new one with the provider's IP and device, which also overwrote the visitor's. Inherited events from bots are not found — `latestVisitEvent()` excludes bot events.
 
 The same applies to `Visits::track()` from a queued job or an Artisan command: the "request" is the console request Laravel creates (`APP_URL`, IP `127.0.0.1`), and without `inheritFrom` every call creates a new visitor.
 

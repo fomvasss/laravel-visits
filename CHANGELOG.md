@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.7] - 2026-10-07
+
+### Fixed
+- `Visits::track(..., inheritFrom: ...)` from a payment webhook, after the visitor's session had timed out, opened a new session with the provider's IP, geo and User-Agent and overwrote the visitor's last-known geo and device with them; a provider User-Agent detected as a bot also marked the event as bot traffic. An inherited event now joins the visitor's most recent session, takes its bot flag and changes nothing on the visitor
+
 ## [0.13.6] - 2026-10-07
 
 ### Fixed

@@ -50,11 +50,20 @@ class RecordVisitJob implements ShouldQueue
             return;
         }
 
-        // no point paying for a geo lookup on bot traffic
-        $geo = $device['is_bot'] ? [] : $geoResolver->resolve((string) $this->payload->ip);
+        // ?? — a job queued before this flag existed has the property uninitialized
+        $inherited = $this->payload->inherited ?? false;
 
-        $visitor = $this->resolveVisitor($device, $geo);
-        $session = $this->resolveSession($visitor, $device, $geo);
+        // no point paying for a geo lookup on bot traffic, or on a webhook caller's IP
+        $geo = $device['is_bot'] || $inherited ? [] : $geoResolver->resolve((string) $this->payload->ip);
+
+        $visitor = $this->resolveVisitor($device, $geo, $inherited);
+        $session = ($inherited ? $this->latestSession($visitor) : null) ?? $this->resolveSession($visitor, $device, $geo);
+
+        if ($inherited) {
+            // the payment provider's request says nothing about the visitor: no bot flags from
+            // its User-Agent, no activity timestamps moved
+            $device = ['is_bot' => $session->is_bot, 'bot_name' => null, 'bot_category' => null] + $device;
+        }
 
         // `page_views: first_only` (TrackVisit) still needs the visitor/session identity
         // resolved and refreshed above — cookie, geo/device snapshot, session timeout — just
@@ -73,8 +82,19 @@ class RecordVisitJob implements ShouldQueue
             }
         }
 
-        $session->update(['last_activity_at' => now()]);
-        $visitor->update(['last_seen_at' => now()]);
+        if (! $inherited) {
+            $session->update(['last_activity_at' => now()]);
+            $visitor->update(['last_seen_at' => now()]);
+        }
+    }
+
+    /** The visitor's most recent session, open or not — where an inherited event belongs. */
+    private function latestSession(Visitor $visitor): ?Session
+    {
+        return ModelResolver::session()::withoutGlobalScope(WithoutBotsScope::class)
+            ->where('visitor_id', $visitor->id)
+            ->latest('last_activity_at')
+            ->first();
     }
 
     private function isOverBudget(): bool
@@ -105,7 +125,7 @@ class RecordVisitJob implements ShouldQueue
      * @param  array<string, mixed>  $device
      * @param  array<string, mixed>  $geo
      */
-    private function resolveVisitor(array $device, array $geo): Visitor
+    private function resolveVisitor(array $device, array $geo, bool $inherited = false): Visitor
     {
         $visitorClass = ModelResolver::visitor();
 
@@ -128,6 +148,12 @@ class RecordVisitJob implements ShouldQueue
             ]);
 
         $isNew = $visitor->wasRecentlyCreated;
+
+        // an inherited visitor already exists; the caller's IP/User-Agent must not replace its
+        // last-known geo and device
+        if ($inherited) {
+            return $visitor;
+        }
 
         $visitor->fill([
             'is_bot' => $device['is_bot'],

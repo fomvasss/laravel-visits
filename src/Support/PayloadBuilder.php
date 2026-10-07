@@ -32,6 +32,7 @@ class PayloadBuilder
         ?string $url = null,
         bool $recordEvent = true,
         ?string $referrer = null,
+        bool $inherited = false,
     ): VisitPayload {
         $locale = $this->localeResolver->resolve($request);
         $authUser = $request->user();
@@ -75,6 +76,7 @@ class PayloadBuilder
             eventableId: $eventable?->getKey(),
             meta: $meta,
             recordEvent: $recordEvent,
+            inherited: $inherited,
         );
     }
 }

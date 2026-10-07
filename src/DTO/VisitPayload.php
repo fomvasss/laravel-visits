@@ -30,6 +30,9 @@ readonly class VisitPayload
         public int|string|null $eventableId,
         public ?array $meta,
         public bool $recordEvent = true,
+        // the visitor came from track()'s inheritFrom: the request is a server-to-server call
+        // (a payment webhook), its IP/User-Agent are the caller's, not the visitor's
+        public bool $inherited = false,
     ) {
     }
 }
