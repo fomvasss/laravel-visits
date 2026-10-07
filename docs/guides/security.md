@@ -6,7 +6,7 @@ Most of these are inherent to any client-side analytics beacon (the same holds f
 
 `X-Visitor-Id` and `visitor_id` are checked for format only (`TokenResolver::isValidFormat()`), never for authenticity, and they win over the cookie. Anyone who learns another visitor's id — through XSS, logs, a shared link with `?visitor_id=` — can record events under that identity.
 
-The impact is limited to the anonymous tracking identity: the id never authenticates anyone in your app. It can, however, affect which user a visitor row points to — a logged-in attacker sending a victim's id makes `RecordVisitJob` link that visitor row to the attacker's account. Treat the user link on visitors as analytics, not as an audit trail.
+The impact is limited to the anonymous tracking identity: the id never authenticates anyone in your app. It can, however, affect which user a visitor row points to. Since 0.13.2 an ordinary tracked request only links a visitor that has no user yet; a visitor already linked to someone else is moved only by `Login` or `Visits::identify()`. A victim's id that is still unlinked, or sent along with the attacker's own login, still ends up on the attacker's account. Treat the user link on visitors as analytics, not as an audit trail.
 
 ## Cookie and localStorage
 

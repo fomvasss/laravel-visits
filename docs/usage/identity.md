@@ -27,7 +27,7 @@ The cookie is queued on the response for every tracked request, whichever source
 
 - **Laravel's `Login` event** — `MergeVisitorIdentity` resolves the current visitor id and links the visitor to the user, then fires `VisitorIdentified`. It also writes the user onto the visitor's open session if that session has no user yet.
 - **`Visits::identify($user)`** — the same merge without a login, see below.
-- **Any tracked request of an authenticated user** — `RecordVisitJob` copies `$request->user()` onto the visitor every time. This does not fire `VisitorIdentified`.
+- **Any tracked request of an authenticated user** — `RecordVisitJob` copies `$request->user()` onto the visitor if it has no user yet. A visitor linked to another user is left alone; only `Login` and `identify()` move it. This does not fire `VisitorIdentified`.
 
 `visit_sessions.user_type`/`user_id` is a snapshot: set when the session is opened by an authenticated request, or by the merge above if still empty, and never changed afterwards — even if another account logs in on the same device later.
 

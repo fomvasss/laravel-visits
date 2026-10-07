@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-10-07
+
+### Fixed
+- A signed-in user sending another visitor's id (`X-Visitor-Id`, `visitor_id`) moved that visitor row to their own account on any tracked request. A tracked request now only links a visitor that has no user yet; `Login` and `Visits::identify()` still relink, as before
+
 ## [0.13.1] - 2026-10-07
 
 ### Fixed

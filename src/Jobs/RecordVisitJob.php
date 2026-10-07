@@ -148,7 +148,9 @@ class RecordVisitJob implements ShouldQueue
             'device_meta' => $this->deviceMeta($device),
         ]);
 
-        if ($this->payload->authUserType && $this->payload->authUserId !== null) {
+        // only an unlinked visitor: moving one that belongs to another user is left to Login and
+        // identify(), otherwise any signed-in request with a foreign X-Visitor-Id would take it over
+        if ($this->payload->authUserType && $this->payload->authUserId !== null && $visitor->user_id === null) {
             $visitor->user_type = $this->payload->authUserType;
             $visitor->user_id = $this->payload->authUserId;
         }

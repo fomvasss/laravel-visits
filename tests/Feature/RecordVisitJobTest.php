@@ -189,6 +189,26 @@ class RecordVisitJobTest extends TestCase
         $this->assertSame(255, mb_strlen($event->path));
     }
 
+    public function test_authenticated_request_links_an_unlinked_visitor(): void
+    {
+        $this->fakeGeo();
+        RecordVisitJob::dispatchSync($this->payload(['authUserType' => 'user', 'authUserId' => '7']));
+
+        $this->assertSame('7', Visitor::first()->user_id);
+    }
+
+    public function test_authenticated_request_does_not_take_over_another_users_visitor(): void
+    {
+        $this->fakeGeo();
+        RecordVisitJob::dispatchSync($this->payload(['authUserType' => 'user', 'authUserId' => '7']));
+        RecordVisitJob::dispatchSync($this->payload(['authUserType' => 'user', 'authUserId' => '8']));
+
+        $visitor = Visitor::first();
+        $this->assertSame('user', $visitor->user_type);
+        $this->assertSame('7', $visitor->user_id);
+        $this->assertSame(2, Event::count());
+    }
+
     public function test_excluded_ip_records_nothing(): void
     {
         $this->fakeGeo();
