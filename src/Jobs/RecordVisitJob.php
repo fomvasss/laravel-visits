@@ -122,7 +122,7 @@ class RecordVisitJob implements ShouldQueue
                 'first_landing_url' => $this->payload->url,
                 'first_referrer_url' => $this->truncate($this->payload->referrer, 2048),
                 'first_referrer_host' => $this->truncate($this->referrerHost(), 255),
-                'search_term' => $this->payload->searchTerm,
+                'search_term' => $this->truncate($this->payload->searchTerm, 255),
                 'extra_params' => $this->payload->extraParams !== [] ? $this->payload->extraParams : null,
                 ...$this->prefixedUtm($this->payload->utm),
             ]);
@@ -200,7 +200,7 @@ class RecordVisitJob implements ShouldQueue
             'landing_url' => $this->payload->url,
             'referrer_url' => $this->truncate($this->payload->referrer, 2048),
             'referrer_host' => $this->truncate($this->referrerHost(), 255),
-            'search_term' => $this->payload->searchTerm ?? $visitor->search_term,
+            'search_term' => $this->truncate($this->payload->searchTerm, 255) ?? $visitor->search_term,
             'extra_params' => $extraParams !== [] ? $extraParams : null,
             'ip' => $this->payload->ip,
             'country_code' => $geo['country_code'] ?? null,
@@ -272,9 +272,9 @@ class RecordVisitJob implements ShouldQueue
             'session_id' => $session->id,
             'visitor_id' => $visitor->id,
             'type' => $this->payload->type,
-            'name' => $this->payload->name,
+            'name' => $this->truncate($this->payload->name, 255),
             'url' => $this->payload->url,
-            'path' => $this->payload->url ? parse_url($this->payload->url, PHP_URL_PATH) : null,
+            'path' => $this->truncate($this->payload->url ? (parse_url($this->payload->url, PHP_URL_PATH) ?: null) : null, 255),
             'route_name' => $this->payload->routeName,
             'is_bot' => $device['is_bot'],
             'bot_name' => $device['bot_name'],
@@ -311,7 +311,10 @@ class RecordVisitJob implements ShouldQueue
     {
         $columns = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref'];
 
-        return array_intersect_key($utm, array_flip($columns));
+        return array_map(
+            fn ($value) => $this->truncate($value, 255),
+            array_intersect_key($utm, array_flip($columns)),
+        );
     }
 
     private function referrerHost(): ?string

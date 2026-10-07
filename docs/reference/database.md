@@ -98,7 +98,4 @@ Rollups written by `visits:aggregate`.
 
 Unique key: `(date, tenant_id, metric, dimension, dimension_value)`.
 
-Referrer URL and host are cut to their column length before saving (since 0.12.0), so a huge `Referer` header no longer fails the visit.
-
-> [!WARNING]
-> Other request-derived strings are not cut: UTM/`ref` values, `search_term` and `path` (all 255 characters) and the `name` passed to `Visits::track()`. On a database in strict mode a longer value fails `RecordVisitJob` and the visit is lost — `failed_jobs` shows `Data too long` (MySQL) or `value too long` (PostgreSQL).
+Request-derived strings are cut to their column length before saving, so an oversized value loses its tail instead of failing the visit: referrer URL and host (since 0.12.0), UTM/`ref` values, `search_term`, `path` and the `name` passed to `Visits::track()` (255 characters, since 0.13.1). Before 0.13.1 a longer value of these on a database in strict mode failed `RecordVisitJob` and the visit was lost (`Data too long` / `value too long` in `failed_jobs`).

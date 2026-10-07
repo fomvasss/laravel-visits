@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-07
+
+### Fixed
+- UTM/`ref` values, `search_term`, the event `path` and the `name` passed to `Visits::track()` longer than 255 characters failed the job on a database in strict mode, and the visit was lost. They are now cut to the column length, like the referrer
+
 ## [0.13.0] - 2026-10-07
 
 ### Changed

@@ -162,6 +162,33 @@ class RecordVisitJobTest extends TestCase
         $this->assertSame(2048, mb_strlen($session->referrer_url));
     }
 
+    public function test_overlong_tracking_values_are_truncated_instead_of_failing_the_insert(): void
+    {
+        $this->fakeGeo();
+        $long = str_repeat('a', 300);
+
+        RecordVisitJob::dispatchSync($this->payload([
+            'type' => Event::TYPE_ACTION,
+            'name' => $long,
+            'url' => 'https://example.test/' . $long,
+            'searchTerm' => $long,
+            'utm' => ['utm_source' => $long, 'ref' => $long],
+        ]));
+
+        $visitor = Visitor::first();
+        $this->assertSame(255, mb_strlen($visitor->utm_source));
+        $this->assertSame(255, mb_strlen($visitor->ref));
+        $this->assertSame(255, mb_strlen($visitor->search_term));
+
+        $session = Session::first();
+        $this->assertSame(255, mb_strlen($session->utm_source));
+        $this->assertSame(255, mb_strlen($session->search_term));
+
+        $event = Event::first();
+        $this->assertSame(255, mb_strlen($event->name));
+        $this->assertSame(255, mb_strlen($event->path));
+    }
+
     public function test_excluded_ip_records_nothing(): void
     {
         $this->fakeGeo();
