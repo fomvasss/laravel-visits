@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.6] - 2026-10-07
+
+### Fixed
+- `visits.enabled = false` left the dashboard and `/visits/whoami` registered and `Visits::whoami()` working, though the switch is documented as turning the whole package off. They are now off too; `POST /visits/collect` stays and answers `{"visitor_id": null}`
+
 ## [0.13.5] - 2026-10-07
 
 ### Fixed

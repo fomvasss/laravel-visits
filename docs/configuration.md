@@ -12,7 +12,7 @@ All keys live in `config/visits.php`. Keys without an env variable can only be c
 
 | Key | Env | Default | Description |
 |---|---|---|---|
-| `enabled` | `VISITS_ENABLED` | `true` | Turns tracking off: `TrackVisit` and `Visits::track()` do nothing, `POST /visits/collect` returns `{"visitor_id": null}`, the `Login`/`Logout` listeners and `Visits::identify()` do nothing, and `TrackVisit` is not added to the `web` group. The dashboard and `/visits/whoami` routes stay registered — turn them off with `dashboard.enabled` and `whoami.enabled` |
+| `enabled` | `VISITS_ENABLED` | `true` | Turns tracking off: `TrackVisit` and `Visits::track()` do nothing, `POST /visits/collect` returns `{"visitor_id": null}`, the `Login`/`Logout` listeners and `Visits::identify()` do nothing, and `TrackVisit` is not added to the `web` group. The dashboard and `/visits/whoami` routes are not registered and `Visits::whoami()` returns `[]` (before 0.13.6 they kept working) |
 | `models.visitor` | — | `Fomvasss\Visits\Models\Visitor` | Visitor model class. Overrides must extend the package model ([Custom models](usage/customization.md#overriding-models)) |
 | `models.session` | — | `Fomvasss\Visits\Models\Session` | Session model class |
 | `models.event` | — | `Fomvasss\Visits\Models\Event` | Event model class |

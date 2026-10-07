@@ -22,7 +22,7 @@ $info = Visits::whoami(ip: '8.8.8.8'); // geo for another IP
 Visits::whoami(?Request $request = null, ?string $ip = null): array
 ```
 
-`$ip` is passed through as is — validate it if it comes from user input. `whoami()` works even when `visits.enabled` is `false`.
+`$ip` is passed through as is — validate it if it comes from user input. With `visits.enabled = false` `whoami()` returns `[]` and the endpoint is not registered.
 
 ## JSON endpoint
 

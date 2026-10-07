@@ -105,6 +105,10 @@ class VisitsManager
      */
     public function whoami(?Request $request = null, ?string $ip = null): array
     {
+        if (! config('visits.enabled', true)) {
+            return [];
+        }
+
         return $this->requestInspector->inspect($request ?? $this->request, $ip);
     }
 }

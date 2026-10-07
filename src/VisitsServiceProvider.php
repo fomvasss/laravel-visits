@@ -134,6 +134,12 @@ class VisitsServiceProvider extends ServiceProvider
             ->post('visits/collect', CollectController::class)
             ->name('visits.collect');
 
+        // the master switch turns off the dashboard and whoami too; collect stays registered so
+        // a deployed visits.js gets its `visitor_id: null` answer instead of a 404
+        if (! config('visits.enabled', true)) {
+            return;
+        }
+
         if (config('visits.whoami.enabled', true)) {
             $whoamiMiddleware = (array) config('visits.whoami.middleware', ['web']);
             $whoamiMiddleware[] = 'throttle:' . config('visits.rate_limit.whoami', '60,1');
