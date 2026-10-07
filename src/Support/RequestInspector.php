@@ -68,8 +68,8 @@ class RequestInspector
             'locale' => $locale,
             'referrer' => $request->header('referer'),
             'tracking_params' => [
-                'utm' => $this->paramsExtractor->extractCore($request),
-                'extra' => $this->paramsExtractor->extractExtra($request),
+                'utm' => $this->paramsExtractor->extractCore($request->query()),
+                'extra' => $this->paramsExtractor->extractExtra($request->query()),
             ],
         ];
     }

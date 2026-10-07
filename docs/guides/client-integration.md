@@ -15,11 +15,12 @@ Setups beyond a same-origin Blade app: calling the endpoint without the JS beaco
 | `type` | `page_view` (default) or `action` |
 | `name` | string up to 255 characters; required when `type` is `action` |
 | `url` | string up to 2048 characters; stored as the event URL and path. Always send it: when omitted, the collect URL itself is stored and `route_name` becomes `visits.collect` |
+| `referrer` | string up to 2048 characters; the page the user came from (`document.referrer`). When `url` is sent, the collect request's own `Referer` header is ignored — it is your page, not the source |
 | `meta` | object |
 
 Responses: `200 {"visitor_id": "..."}`, `403 {"visitor_id": null}` when `collect.allowed_origins` rejects the origin, `422` for invalid fields, `429` from the throttle, `200 {"visitor_id": null}` when `visits.enabled` is off.
 
-UTM parameters and click IDs are read from the collect request's own query string, not from the body — append them to the endpoint URL to attribute a session: `POST /visits/collect?utm_source=newsletter`.
+UTM parameters and click IDs are read from the query of `url`, and from the collect request's own query string (`POST /visits/collect?utm_source=newsletter`); when both have a parameter, `url` wins.
 
 What the beacon adds on top: the `VisitsQueue` buffer, the automatic page view on `load`, and swallowing failed requests so tracking never breaks the page.
 
@@ -37,7 +38,7 @@ fastcgi_ignore_headers Set-Cookie;
 proxy_ignore_headers Set-Cookie;
 ```
 
-**Use the beacon for cached pages.** `visits.js` runs in the browser whether the HTML came from the cache or not, and `POST /visits/collect` is never cached (page caches only cache `GET`/`HEAD` by default). The beacon sends its `localStorage` id as `X-Visitor-Id`, which beats any cookie, so even a stale cached cookie doesn't corrupt tracking on this path. Call `Visits.trackPageView()` or keep `autoTrackPageView` on, and exclude these routes from `TrackVisit` (`exclude_paths`, or `auto_track = false`).
+**Use the beacon for cached pages.** `visits.js` runs in the browser whether the HTML came from the cache or not, and `POST /visits/collect` is never cached (page caches only cache `GET`/`HEAD` by default). The beacon sends its `localStorage` id as `X-Visitor-Id`, which beats any cookie, so even a stale cached cookie doesn't corrupt tracking on this path. Call `Visits.trackPageView()` or set `autoTrackPageView: true`, and exclude these routes from `TrackVisit` (`exclude_paths`, or `auto_track = false`).
 
 **A cached CSRF token breaks the beacon silently.** The `csrf-token` meta tag is per session. Baked into a cached page, it doesn't match most visitors' sessions, the collect request gets `419`, and the beacon swallows the error. The endpoint doesn't need CSRF protection — identity comes from the visitor id, not the session — so exclude it:
 

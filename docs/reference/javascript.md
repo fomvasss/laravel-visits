@@ -9,7 +9,7 @@ Read once when the script runs.
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `endpoint` | string | `'/visits/collect'` | Collect URL; absolute for another origin |
-| `autoTrackPageView` | boolean | `true` | Send `trackPageView()` on `window.load`, or immediately if already loaded. Only `false` turns it off |
+| `autoTrackPageView` | boolean | `false` | `true` sends `trackPageView()` on `window.load`, or immediately if already loaded |
 
 ## `window.Visits`
 

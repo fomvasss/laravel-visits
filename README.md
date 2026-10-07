@@ -62,7 +62,6 @@ $order->latestVisitEvent('order.placed')->first()?->session->utm_source;
 ```
 
 ```html
-<script>window.VisitsConfig = { autoTrackPageView: false };</script>
 <script src="/vendor/visits/visits.js"></script>
 <script>
     Visits.track('newsletter.subscribed', { plan: 'pro' });

@@ -22,7 +22,7 @@ class TrackingParamsExtractorTest extends TestCase
     {
         $request = Request::create('/?utm_source=google&utm_medium=cpc');
 
-        $core = $this->extractor->extractCore($request);
+        $core = $this->extractor->extractCore($request->query());
 
         $this->assertSame(['utm_source' => 'google', 'utm_medium' => 'cpc'], $core);
     }
@@ -31,7 +31,7 @@ class TrackingParamsExtractorTest extends TestCase
     {
         $request = Request::create('/?utm_source=&utm_medium=cpc');
 
-        $core = $this->extractor->extractCore($request);
+        $core = $this->extractor->extractCore($request->query());
 
         $this->assertArrayNotHasKey('utm_source', $core);
         $this->assertSame('cpc', $core['utm_medium']);
@@ -41,7 +41,7 @@ class TrackingParamsExtractorTest extends TestCase
     {
         $request = Request::create('/?gclid=abc123&fbclid=xyz789&unrelated=1');
 
-        $extra = $this->extractor->extractExtra($request);
+        $extra = $this->extractor->extractExtra($request->query());
 
         $this->assertSame(['gclid' => 'abc123', 'fbclid' => 'xyz789'], $extra);
     }
@@ -52,7 +52,7 @@ class TrackingParamsExtractorTest extends TestCase
 
         $request = Request::create('/?custom_foo=1&custom_bar=2&irrelevant=3');
 
-        $extra = $this->extractor->extractExtra($request);
+        $extra = $this->extractor->extractExtra($request->query());
 
         $this->assertSame(['custom_foo' => '1', 'custom_bar' => '2'], $extra);
     }
@@ -61,7 +61,7 @@ class TrackingParamsExtractorTest extends TestCase
     {
         $request = Request::create('/?custom_foo=1');
 
-        $extra = $this->extractor->extractExtra($request);
+        $extra = $this->extractor->extractExtra($request->query());
 
         $this->assertSame([], $extra);
     }
@@ -72,7 +72,7 @@ class TrackingParamsExtractorTest extends TestCase
 
         $request = Request::create('/?utm_source=google');
 
-        $extra = $this->extractor->extractExtra($request);
+        $extra = $this->extractor->extractExtra($request->query());
 
         $this->assertArrayNotHasKey('utm_source', $extra);
     }

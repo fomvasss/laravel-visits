@@ -43,6 +43,7 @@ class CollectController extends Controller
             'type' => 'nullable|in:' . Event::TYPE_PAGE_VIEW . ',' . Event::TYPE_ACTION,
             'name' => 'nullable|string|max:255|required_if:type,' . Event::TYPE_ACTION,
             'url' => 'nullable|string|max:2048',
+            'referrer' => 'nullable|string|max:2048',
             'meta' => 'nullable|array',
         ]);
 
@@ -61,6 +62,7 @@ class CollectController extends Controller
             name: $validated['name'] ?? null,
             meta: $validated['meta'] ?? null,
             url: $validated['url'] ?? null,
+            referrer: $validated['referrer'] ?? null,
         );
 
         RecordVisitJob::dispatch($payload)

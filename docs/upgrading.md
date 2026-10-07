@@ -5,6 +5,18 @@ The package is pre-1.0: minor versions may break. Composer's caret on `0.x` stay
 > [!WARNING]
 > Before 1.0 the migrations were edited in place instead of adding new ones (0.2.0, 0.7.0). `php artisan migrate` does not change tables that were created by an older version — apply the listed schema changes yourself.
 
+## To 0.13
+
+**The JS beacon no longer tracks the page load by default.** With `TrackVisit` active every page was counted twice. Re-publish the script — a published copy is not updated by Composer:
+
+```bash
+php artisan vendor:publish --tag=visits-assets --force
+```
+
+Where the beacon is the only page-view tracking (full-page cache, a separate frontend), turn it back on: `window.VisitsConfig = { autoTrackPageView: true }`. A `{ autoTrackPageView: false }` you set to avoid double counting can be removed.
+
+Beacon events now carry attribution: UTM/click IDs from the page URL and `referrer` from `document.referrer`. The `endpoint: '/visits/collect' + window.location.search` workaround can be removed; it still works.
+
 ## To 0.12
 
 No breaking changes.

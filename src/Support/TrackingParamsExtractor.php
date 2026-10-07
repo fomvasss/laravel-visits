@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Fomvasss\Visits\Support;
 
-use Illuminate\Http\Request;
-
 /**
  * Captures UTM/ref (core, indexed columns) + click-ids and unknown-but-matched params
- * (extra_params json bucket) from the current request's query string.
+ * (extra_params json bucket) from a query string — the current request's, or the reported page's
+ * for the JS beacon.
  *
  * Config-driven, no migration needed to support a new click-id or campaign param —
  * see config('visits.tracking_params').
@@ -16,14 +15,15 @@ use Illuminate\Http\Request;
 class TrackingParamsExtractor
 {
     /**
+     * @param  array<string, mixed>  $query
      * @return array<string, string> column => value, only for params actually present
      */
-    public function extractCore(Request $request): array
+    public function extractCore(array $query): array
     {
         $core = [];
 
         foreach ((array) config('visits.tracking_params.core', []) as $column => $param) {
-            $value = $request->query($param);
+            $value = $query[$param] ?? null;
 
             if (is_string($value) && $value !== '') {
                 $core[$column] = $value;
@@ -34,14 +34,15 @@ class TrackingParamsExtractor
     }
 
     /**
+     * @param  array<string, mixed>  $query
      * @return array<string, string>
      */
-    public function extractExtra(Request $request): array
+    public function extractExtra(array $query): array
     {
         $extra = [];
 
         foreach ((array) config('visits.tracking_params.extra_keys', []) as $key) {
-            $value = $request->query($key);
+            $value = $query[$key] ?? null;
 
             if (is_string($value) && $value !== '') {
                 $extra[$key] = $value;
@@ -53,7 +54,7 @@ class TrackingParamsExtractor
         if (is_string($pattern) && $pattern !== '') {
             $coreParams = array_values((array) config('visits.tracking_params.core', []));
 
-            foreach ($request->query() as $key => $value) {
+            foreach ($query as $key => $value) {
                 if (! is_string($value) || $value === '') {
                     continue;
                 }

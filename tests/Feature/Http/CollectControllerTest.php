@@ -27,6 +27,33 @@ class CollectControllerTest extends TestCase
             && $job->payload->url === 'https://spa.example.test/dashboard');
     }
 
+    public function test_attribution_comes_from_the_reported_page_not_the_collect_request(): void
+    {
+        Queue::fake();
+
+        $this->withHeader('Referer', 'https://spa.example.test/landing?utm_source=wrong')
+            ->postJson('/visits/collect?utm_source=wrong&utm_medium=email', [
+                'url' => 'https://spa.example.test/landing?utm_source=newsletter&utm_campaign=autumn&gclid=abc',
+                'referrer' => 'https://www.google.com/',
+            ])
+            ->assertOk();
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->utm == ['utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'autumn']
+            && ($job->payload->extraParams['gclid'] ?? null) === 'abc'
+            && $job->payload->referrer === 'https://www.google.com/');
+    }
+
+    public function test_without_a_reported_referrer_the_collect_requests_referer_is_not_used(): void
+    {
+        Queue::fake();
+
+        $this->withHeader('Referer', 'https://spa.example.test/dashboard')
+            ->postJson('/visits/collect', ['url' => 'https://spa.example.test/dashboard'])
+            ->assertOk();
+
+        Queue::assertPushed(RecordVisitJob::class, fn ($job) => $job->payload->referrer === null);
+    }
+
     public function test_action_requires_a_name(): void
     {
         Queue::fake();

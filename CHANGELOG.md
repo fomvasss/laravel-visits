@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-07
+
+### Changed
+- `visits.js`: `autoTrackPageView` is off by default. With the `TrackVisit` middleware active every page load was counted twice. Set `window.VisitsConfig = { autoTrackPageView: true }` where the beacon is the only page-view tracking. Re-publish the script (`vendor:publish --tag=visits-assets --force`)
+
+### Fixed
+- Sessions opened by the JS beacon lost attribution: UTM, `ref` and click IDs were read from the collect request's query and the referrer was the page itself. They now come from the query of the reported `url` and from `document.referrer`, sent as the new `referrer` field of `POST /visits/collect`. A query appended to the endpoint still counts; `url` wins on conflicts
+
 ## [0.12.2] - 2026-09-21
 
 ### Fixed

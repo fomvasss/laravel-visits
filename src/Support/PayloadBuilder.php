@@ -31,10 +31,21 @@ class PayloadBuilder
         ?array $meta = null,
         ?string $url = null,
         bool $recordEvent = true,
+        ?string $referrer = null,
     ): VisitPayload {
         $locale = $this->localeResolver->resolve($request);
         $authUser = $request->user();
-        $referrer = $request->header('referer');
+
+        if ($url === null) {
+            $referrer = $request->header('referer');
+            $query = $request->query();
+        } else {
+            // the JS beacon: the collect request's own Referer is the page itself, so attribution
+            // comes from document.referrer and the reported page's query. The collect request's
+            // query still counts for clients that append UTM to the endpoint; the page's wins
+            parse_str((string) parse_url($url, PHP_URL_QUERY), $pageQuery);
+            $query = array_merge($request->query(), $pageQuery);
+        }
 
         return new VisitPayload(
             token: $token,
@@ -51,8 +62,8 @@ class PayloadBuilder
             userAgent: (string) $request->userAgent(),
             referrer: $referrer,
             searchTerm: $this->searchTermExtractor->extract($referrer),
-            utm: $this->paramsExtractor->extractCore($request),
-            extraParams: $this->paramsExtractor->extractExtra($request),
+            utm: $this->paramsExtractor->extractCore($query),
+            extraParams: $this->paramsExtractor->extractExtra($query),
             locale: $locale['locale'],
             browserLanguage: $locale['browser_language'],
             // getMorphClass() (not ::class) — respects the host's Relation::morphMap() alias

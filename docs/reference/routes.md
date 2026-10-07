@@ -28,6 +28,7 @@ Request body (JSON or form):
 | `type` | `nullable`, `page_view` or `action`; `page_view` when omitted |
 | `name` | `nullable`, string, max 255, required if `type` is `action` |
 | `url` | `nullable`, string, max 2048 |
+| `referrer` | `nullable`, string, max 2048 |
 | `meta` | `nullable`, array |
 | `visitor_id` | optional, alternative to the `X-Visitor-Id` header |
 

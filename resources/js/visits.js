@@ -2,6 +2,9 @@
  * Visits JS beacon — for SPA route changes and client-side custom events that the plain
  * server-side middleware can't see. No build step: include directly or via vendor:publish.
  *
+ * Set window.VisitsConfig = { autoTrackPageView: true } to track the initial page load from
+ * here — only when the TrackVisit middleware doesn't (cached pages, a separate frontend).
+ *
  * Usage (once this script has loaded):
  *   Visits.trackPageView();               // call on every SPA route change
  *   Visits.track('newsletter.subscribed', { plan: 'pro' });
@@ -84,12 +87,20 @@
             });
     }
 
+    // url carries the UTM/click-id query, referrer the external source: the collect request's
+    // own query and Referer header describe neither
     function trackPageView(url) {
-        return send({ type: 'page_view', url: url || window.location.href });
+        return send({ type: 'page_view', url: url || window.location.href, referrer: document.referrer || null });
     }
 
     function track(name, meta) {
-        return send({ type: 'action', name: name, url: window.location.href, meta: meta || null });
+        return send({
+            type: 'action',
+            name: name,
+            url: window.location.href,
+            referrer: document.referrer || null,
+            meta: meta || null,
+        });
     }
 
     window.Visits = { track: track, trackPageView: trackPageView };
@@ -117,7 +128,9 @@
 
     window.VisitsQueue = queue;
 
-    if (config.autoTrackPageView !== false) {
+    // off by default: with the TrackVisit middleware active the server already counted this
+    // page, and a second hit from here would double every page view
+    if (config.autoTrackPageView === true) {
         if (document.readyState === 'complete') {
             trackPageView();
         } else {
