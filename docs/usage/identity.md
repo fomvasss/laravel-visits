@@ -27,14 +27,14 @@ The cookie is queued on the response for every tracked request, whichever source
 
 - **Laravel's `Login` event** — `MergeVisitorIdentity` resolves the current visitor id and links the visitor to the user, then fires `VisitorIdentified`. It also writes the user onto the visitor's open session if that session has no user yet.
 - **`Visits::identify($user)`** — the same merge without a login, see below.
-- **Any tracked request of an authenticated user** — `RecordVisitJob` copies `$request->user()` onto the visitor if it has no user yet. A visitor linked to another user is left alone; only `Login` and `identify()` move it. This does not fire `VisitorIdentified`.
+- **Any tracked request of an authenticated user** — `RecordVisitJob` copies `$request->user()` onto the visitor if it has no user yet. A visitor linked to another user is left alone; only `Login` and `identify()` move it. Linking a visitor that had no user fires `VisitorIdentified` (since 0.13.8).
 
 `visit_sessions.user_type`/`user_id` is a snapshot: set when the session is opened by an authenticated request, or by the merge above if still empty, and never changed afterwards — even if another account logs in on the same device later.
 
 `user_type` is the user model's morph class, so a `Relation::morphMap()` alias is respected. `user_id` is a string column — UUID and ULID keys work.
 
-> [!WARNING]
-> The merge only updates an existing visitor row. On a visitor's very first requests the row may not exist yet — `RecordVisitJob` is still in the queue — and then the merge does nothing and `VisitorIdentified` is not fired. The link is still made by the job on the next authenticated tracked request, without the event. Don't rely on `VisitorIdentified` firing for every login.
+> [!NOTE]
+> The merge only updates an existing visitor row. On a visitor's very first requests the row may not exist yet — `RecordVisitJob` is still in the queue — and then the merge does nothing. The link is made by the job on the next authenticated tracked request, which fires `VisitorIdentified` then (since 0.13.8; before, the event was lost). A re-login on a visitor already linked to the same user fires it from the merge only.
 
 ## Identifying without a login
 

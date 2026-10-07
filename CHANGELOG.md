@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.8] - 2026-10-07
+
+### Fixed
+- A login on a visitor's very first request (before its row existed) never fired `VisitorIdentified`: the merge found no row, and the job that linked the user later didn't fire it. `RecordVisitJob` now fires `VisitorIdentified` when it links a visitor that had no user — once, also for users authenticated by token without a `Login` event
+
 ## [0.13.7] - 2026-10-07
 
 ### Fixed

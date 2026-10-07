@@ -121,7 +121,7 @@ erDiagram
 | `SessionStarted` | `RecordVisitJob` — no reusable open session | `Session` |
 | `VisitRecorded` | `RecordVisitJob` — every written event | `Event` |
 | `ConversionRecorded` | `RecordVisitJob` — `type = action` with an `eventable` | `Event` |
-| `VisitorIdentified` | `VisitorIdentityMerger` — `Login` or `Visits::identify()` | `Visitor` |
+| `VisitorIdentified` | `VisitorIdentityMerger` — `Login` or `Visits::identify()`; `RecordVisitJob` — first link of an unlinked visitor | `Visitor` |
 
 Two listeners hook Laravel's auth events:
 

@@ -8,6 +8,7 @@ use Fomvasss\Visits\DTO\VisitPayload;
 use Fomvasss\Visits\Events\ConversionRecorded;
 use Fomvasss\Visits\Events\SessionStarted;
 use Fomvasss\Visits\Events\VisitorCreated;
+use Fomvasss\Visits\Events\VisitorIdentified;
 use Fomvasss\Visits\Events\VisitRecorded;
 use Fomvasss\Visits\Models\Event;
 use Fomvasss\Visits\Models\Scopes\WithoutBotsScope;
@@ -176,7 +177,9 @@ class RecordVisitJob implements ShouldQueue
 
         // only an unlinked visitor: moving one that belongs to another user is left to Login and
         // identify(), otherwise any signed-in request with a foreign X-Visitor-Id would take it over
-        if ($this->payload->authUserType && $this->payload->authUserId !== null && $visitor->user_id === null) {
+        $identified = $this->payload->authUserType && $this->payload->authUserId !== null && $visitor->user_id === null;
+
+        if ($identified) {
             $visitor->user_type = $this->payload->authUserType;
             $visitor->user_id = $this->payload->authUserId;
         }
@@ -185,6 +188,12 @@ class RecordVisitJob implements ShouldQueue
 
         if ($isNew) {
             VisitorCreated::dispatch($visitor);
+        }
+
+        // the first link of this visitor to a user — also when it happens here because Login's
+        // merge ran before the visitor row existed (a login on the very first request)
+        if ($identified) {
+            VisitorIdentified::dispatch($visitor);
         }
 
         return $visitor;

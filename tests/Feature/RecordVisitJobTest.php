@@ -192,9 +192,14 @@ class RecordVisitJobTest extends TestCase
     public function test_authenticated_request_links_an_unlinked_visitor(): void
     {
         $this->fakeGeo();
+        \Illuminate\Support\Facades\Event::fake([\Fomvasss\Visits\Events\VisitorIdentified::class]);
+
+        RecordVisitJob::dispatchSync($this->payload(['authUserType' => 'user', 'authUserId' => '7']));
         RecordVisitJob::dispatchSync($this->payload(['authUserType' => 'user', 'authUserId' => '7']));
 
         $this->assertSame('7', Visitor::first()->user_id);
+        // once, on the first link — not on every authenticated request
+        \Illuminate\Support\Facades\Event::assertDispatchedTimes(\Fomvasss\Visits\Events\VisitorIdentified::class, 1);
     }
 
     public function test_authenticated_request_does_not_take_over_another_users_visitor(): void
