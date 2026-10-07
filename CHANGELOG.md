@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.3] - 2026-10-07
+
+### Fixed
+- `visits:aggregate` for a day whose raw rows `visits:prune` had deleted replaced that day's rollups with zeros. Days older than `retention_days` are now skipped with a warning; `--force` recomputes them
+
 ## [0.13.2] - 2026-10-07
 
 ### Fixed

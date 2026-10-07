@@ -12,7 +12,7 @@ Background and scheduling: [Rollups, sessions & retention](../usage/maintenance.
 ## `visits:aggregate`
 
 ```
-visits:aggregate {--date=} {--from=} {--to=}
+visits:aggregate {--date=} {--from=} {--to=} {--force}
 ```
 
 | Option | Description |
@@ -20,8 +20,9 @@ visits:aggregate {--date=} {--from=} {--to=}
 | `--date` | `today` (default), `yesterday`, or any date `Carbon::parse()` understands |
 | `--from` | First day of a range; takes precedence over `--date` |
 | `--to` | Last day of the range; defaults to `--from` |
+| `--force` | Also recompute days older than `retention_days` |
 
-For each day and each distinct `tenant_id` of `visit_visitors`: deletes that day's rows and inserts new totals and dimension counts for `visitors`, `sessions`, `page_views` and `conversions`, bots excluded. Prints `Aggregated YYYY-MM-DD` per day.
+For each day and each distinct `tenant_id` of `visit_visitors`: deletes that day's rows and inserts new totals and dimension counts for `visitors`, `sessions`, `page_views` and `conversions`, bots excluded. Prints `Aggregated YYYY-MM-DD` per day. A day that starts before `now() - retention_days` is skipped with a warning unless `--force` is given: its raw rows may already be pruned.
 
 ## `visits:close-stale-sessions`
 

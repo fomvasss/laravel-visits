@@ -140,6 +140,7 @@ class SeedDemoCommand extends Command
 
         $this->call('visits:aggregate', [
             '--from' => now()->subDays($days)->toDateString(),
+            '--force' => true,
             '--to' => now()->toDateString(),
         ]);
 

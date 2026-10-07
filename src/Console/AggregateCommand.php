@@ -21,13 +21,23 @@ use Illuminate\Support\Facades\DB;
  */
 class AggregateCommand extends Command
 {
-    protected $signature = 'visits:aggregate {--date=} {--from=} {--to=}';
+    protected $signature = 'visits:aggregate {--date=} {--from=} {--to=} {--force : Also recompute days older than retention_days}';
 
     protected $description = 'Recompute visit_stats_daily rollups for the given date(s)';
 
     public function handle(): int
     {
+        // visits:prune deletes the raw rows of these days; recomputing them would replace the
+        // rollups — the only data left — with zeros. The day the cutoff falls in is partial.
+        $retentionStart = now()->subDays((int) config('visits.retention_days', 90));
+
         foreach ($this->resolveDates() as $date) {
+            if (! $this->option('force') && $date->lt($retentionStart)) {
+                $this->warn("Skipped {$date->toDateString()}: older than retention_days, raw data may be pruned (--force to recompute)");
+
+                continue;
+            }
+
             $this->aggregateDate($date);
             $this->info("Aggregated {$date->toDateString()}");
         }

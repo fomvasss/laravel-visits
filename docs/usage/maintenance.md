@@ -24,8 +24,8 @@ For each day and each tenant it deletes the existing rows and inserts freshly co
 
 Bots are excluded from every metric. Each metric gets a total row (`dimension = ''`) plus one row per value of every dimension in `aggregate.dimensions`. Visitors are grouped by their first-touch attribution and their last-known geo and device, sessions by their own columns, events by their session's columns plus the event `name`.
 
-> [!WARNING]
-> Don't re-aggregate dates older than your retention window. After `visits:prune` removed the raw rows, a new run for such a day replaces its rollups with zeros.
+> [!NOTE]
+> Days older than `retention_days` are skipped with a warning: after `visits:prune` removed their raw rows, a new run would replace the rollups — the only data left — with zeros. `--force` recomputes them anyway, for a database that was never pruned. If you prune with `--days` shorter than `retention_days`, the days in between are not protected.
 
 ## Closing sessions — `visits:close-stale-sessions`
 

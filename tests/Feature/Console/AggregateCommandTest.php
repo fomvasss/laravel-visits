@@ -126,4 +126,19 @@ class AggregateCommandTest extends TestCase
         $this->assertSame(1, StatDaily::where(['date' => '2026-03-08', 'metric' => StatDaily::METRIC_VISITORS, 'dimension' => '', 'dimension_value' => ''])->value('count'));
         $this->assertSame(1, StatDaily::where(['date' => '2026-03-09', 'metric' => StatDaily::METRIC_VISITORS, 'dimension' => '', 'dimension_value' => ''])->value('count'));
     }
+
+    public function test_days_older_than_retention_keep_their_rollups(): void
+    {
+        config(['visits.retention_days' => 90]);
+        $old = now()->subDays(100)->toDateString();
+        \Illuminate\Support\Facades\DB::table('visit_stats_daily')->insert(['date' => $old, 'tenant_id' => '', 'metric' => StatDaily::METRIC_VISITORS, 'dimension' => '', 'dimension_value' => '', 'count' => 42]);
+
+        $this->artisan('visits:aggregate', ['--date' => $old])->assertExitCode(0);
+
+        $this->assertSame(42, StatDaily::where('date', $old)->value('count'));
+
+        $this->artisan('visits:aggregate', ['--date' => $old, '--force' => true])->assertExitCode(0);
+
+        $this->assertSame(0, StatDaily::where('date', $old)->where('metric', StatDaily::METRIC_VISITORS)->where('dimension', '')->value('count'));
+    }
 }
