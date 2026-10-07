@@ -93,4 +93,4 @@ Schedule::command('visits:aggregate --date=today')->everyFiveMinutes()->withoutO
 Schedule::command('visits:aggregate --date=yesterday')->dailyAt('00:10')->onOneServer();
 ```
 
-The package schedule uses neither `withoutOverlapping()` nor `onOneServer()`. On several servers running `schedule:run`, define the schedule yourself as above.
+Since 0.13.4 the package schedule uses `withoutOverlapping()` and `onOneServer()` on every command. `onOneServer()` needs a cache store with atomic locks shared by all servers (Redis, Memcached, database, DynamoDB).

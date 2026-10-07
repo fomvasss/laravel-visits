@@ -86,9 +86,11 @@ class VisitsServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
 
-            $schedule->command('visits:close-stale-sessions')->everyFiveMinutes();
-            $schedule->command('visits:aggregate --date=today')->everyFiveMinutes();
-            $schedule->command('visits:aggregate --date=yesterday')->dailyAt('00:10');
+            // onOneServer(): several app servers running schedule:run would each aggregate the
+            // same day; withoutOverlapping(): a slow aggregate must not pile up behind the next
+            $schedule->command('visits:close-stale-sessions')->everyFiveMinutes()->withoutOverlapping()->onOneServer();
+            $schedule->command('visits:aggregate --date=today')->everyFiveMinutes()->withoutOverlapping()->onOneServer();
+            $schedule->command('visits:aggregate --date=yesterday')->dailyAt('00:10')->withoutOverlapping()->onOneServer();
         });
     }
 

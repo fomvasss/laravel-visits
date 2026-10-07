@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.4] - 2026-10-07
+
+### Fixed
+- The package schedule (`schedule.enabled`) ran its commands on every server that runs `schedule:run`, and a slow `visits:aggregate` could overlap the next run. Every command now uses `withoutOverlapping()` and `onOneServer()`; the latter needs a cache store with atomic locks shared by all servers
+
 ## [0.13.3] - 2026-10-07
 
 ### Fixed
