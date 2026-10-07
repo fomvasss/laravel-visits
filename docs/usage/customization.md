@@ -38,7 +38,7 @@ Rules:
 What uses `tenant_id`:
 
 - `visits:aggregate` builds rollups separately for every distinct `tenant_id` found in `visit_visitors`; sessions and events count toward their visitor's tenant
-- Overview and Campaigns accept `?tenant=...` and show a tenant selector once the rollups contain more than one tenant. Without the parameter they show tenant `''` — if every visitor gets a non-empty tenant and there is only one, the selector is hidden and the pages show zeros until you add `?tenant=...`
+- Overview and Campaigns accept `?tenant=...` and show a tenant selector once the rollups contain more than one tenant. Without the parameter they show tenant `''` if it has rollups, otherwise the first tenant that has (so an install with a single non-empty tenant shows its data)
 
 What does not: the Sessions and Visitors lists, the session map, Top pages, "online now", the bot summary and the Live page show all tenants. Sessions and events have no `tenant_id` column of their own.
 

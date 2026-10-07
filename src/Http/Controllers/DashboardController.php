@@ -153,8 +153,9 @@ class DashboardController extends Controller
     public function index(Request $request): View
     {
         [$from, $to] = $this->resolveRange($request);
-        $tenantId = (string) $request->input('tenant', '');
         $statDailyClass = ModelResolver::statDaily();
+        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
+        $tenantId = $this->resolveTenant($request, $tenants);
 
         $rows = $statDailyClass::whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->where('tenant_id', $tenantId)
@@ -197,8 +198,6 @@ class DashboardController extends Controller
         }
 
         $breakdowns = $this->computeBreakdowns($rows, $breakdownMetric, $breakdownDimensions);
-
-        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
 
         // rollups exclude bots entirely, so this reads the raw table directly instead of
         // extending visit_stats_daily with a bot-specific metric just for one summary line.
@@ -264,6 +263,22 @@ class DashboardController extends Controller
     }
 
     /**
+     * The requested tenant, else the global one ('') if it has rollups, else the first that has —
+     * a single-tenant install never sees the selector (one tenant), so defaulting to '' there
+     * showed zeros.
+     *
+     * @param  Collection<int, string>  $tenants
+     */
+    private function resolveTenant(Request $request, Collection $tenants): string
+    {
+        if ($request->has('tenant')) {
+            return (string) $request->input('tenant');
+        }
+
+        return $tenants->contains('') ? '' : (string) ($tenants->first() ?? '');
+    }
+
+    /**
      * All UTM/ref dimensions in one place — index() only surfaces utm_source alongside
      * unrelated dimensions (country/device/etc), this is for drilling into campaign
      * attribution specifically (utm_medium, utm_campaign, utm_term, utm_content, ref).
@@ -271,8 +286,9 @@ class DashboardController extends Controller
     public function campaigns(Request $request): View
     {
         [$from, $to] = $this->resolveRange($request);
-        $tenantId = (string) $request->input('tenant', '');
         $statDailyClass = ModelResolver::statDaily();
+        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
+        $tenantId = $this->resolveTenant($request, $tenants);
 
         $rows = $statDailyClass::whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->where('tenant_id', $tenantId)
@@ -285,8 +301,6 @@ class DashboardController extends Controller
         $breakdownDimensions = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref'];
 
         $breakdowns = $this->computeBreakdowns($rows, $breakdownMetric, $breakdownDimensions);
-
-        $tenants = $statDailyClass::distinct()->orderBy('tenant_id')->pluck('tenant_id');
 
         return view('visits::dashboard.campaigns', compact('breakdowns', 'breakdownMetric', 'from', 'to', 'tenantId', 'tenants'));
     }

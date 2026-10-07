@@ -35,6 +35,21 @@ class DashboardControllerTest extends TestCase
         $response->assertViewHas('totals', fn ($totals) => $totals[StatDaily::METRIC_VISITORS] === 2);
     }
 
+    public function test_index_defaults_to_the_only_tenant(): void
+    {
+        Carbon::setTestNow('2026-03-10 12:00:00');
+
+        Visitor::factory()->create(['is_bot' => false, 'first_seen_at' => now(), 'tenant_id' => 'shop-ua']);
+
+        $this->artisan('visits:aggregate', ['--date' => 'today']);
+
+        $this->get(route('visits.index'))
+            ->assertOk()
+            ->assertViewHas('tenantId', 'shop-ua')
+            ->assertViewHas('totals', fn ($totals) => $totals[StatDaily::METRIC_VISITORS] === 1);
+        $this->get(route('visits.campaigns'))->assertViewHas('tenantId', 'shop-ua');
+    }
+
     public function test_index_session_breakdown_by_utm_source(): void
     {
         Carbon::setTestNow('2026-03-10 12:00:00');

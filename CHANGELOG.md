@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.5] - 2026-10-07
+
+### Fixed
+- Overview and Campaigns without `?tenant=` showed tenant `''`. When every visitor had one non-empty tenant, the selector was hidden and both pages showed zeros. They now default to `''` only if it has rollups, otherwise to the first tenant that has
+
 ## [0.13.4] - 2026-10-07
 
 ### Fixed
